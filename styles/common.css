@@ -1,0 +1,59 @@
+:root {
+    --color-main: rgb(97, 44, 120);
+    --color-background-1: #323232;
+    --color-background-2: #222222;
+    --color-background-translucent: rgba(34, 34, 34, .7);
+    --color-text: white;
+    --color-text-button: var(--color-text);
+    --color-text-code: hotpink;
+    
+    --color-ok: #27ae60;
+    --color-warning: orange;
+    --color-critical: #da4453;
+
+    --gap-default: 12px;
+    --input-border-radius: 8px;
+}
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+    :root {
+        --color-background-2: #dfdfdf;
+        --color-background-1: #cfcfcf;
+        --color-background-translucent: rgba(223,223,223,.7);
+        --bgnone: white;
+        --color-text: black;
+    }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-background-1: #323232;
+        --color-background-2: #222222;
+        --color-background-translucent: rgba(34, 34, 34, .7);
+        --bgnone: black;
+        --color-text: white;
+    }
+}
+
+.message-box{
+    background-color: var(--color-main);
+    color: white;
+    font-weight: bold;
+
+    border-radius: var(--gap-default);
+    padding: var(--gap-default);
+}
+
+.message-box.warning{
+    background-color: var(--color-ok);
+}
+
+.message-box.warning{
+    background-color: var(--color-warning);
+}
+
+.message-box.critical{
+    background-color: var(--color-critical);
+}
