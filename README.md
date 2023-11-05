@@ -1,2 +1,2 @@
 # CalendarClient
-DAViCal calendar client
+DAViCal calendar client optimized for mobile devices.

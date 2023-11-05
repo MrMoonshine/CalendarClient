@@ -13,7 +13,7 @@ session_start();
     </head>
     <body>
         <div class="bg-img"></div>
-        <dialog>
+        <dialog open>
             <a href="/" id="back">&larr; Zurück</a>
             <h2>DAViCal Client</h2>
             <?php
@@ -36,11 +36,11 @@ session_start();
             <p>Please log in with calendar credentials</p>
             <form method="POST" action="">
                 <label for="user">Username</label>
-                <input type="text" name="user" value=""/>
+                <input type="text" name="user" value="<?php echo($_SESSION["user"]); ?>"/>
                 <label for="passwd">Password</label>
                 <div class="input-group">
-                    <input type="password" name="passwd" value="" />
-                    <button type="button">&#128065;</button>
+                    <input type="password" name="passwd" value=""/>
+                    <button id="passwdShowHide" type="button">&#128065;</button>
                 </div>
                 <input type="submit" name="login" value="Log In" />
             </form>
@@ -48,7 +48,20 @@ session_start();
         <script>
             let dialog = document.querySelector("dialog");
             if(dialog){
+                dialog.close();
                 dialog.showModal();
+            }
+
+            let showhide = document.querySelector("#passwdShowHide");
+            if(showhide){
+                let passwd = document.querySelector('input[name="passwd"]');
+                showhide.addEventListener("click", function(){
+                    switch(passwd.getAttribute("type")){
+                        case "password": passwd.setAttribute("type", "text"); break;
+                        case "text": passwd.setAttribute("type", "password"); break;
+                        default: break;
+                    }
+                });
             }
         </script>
     </body>
