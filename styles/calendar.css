@@ -1,0 +1,70 @@
+@media (prefers-color-scheme: light) {
+    :root {
+        --cca1: skyblue;
+        --cca2: indianred;
+        --cca3: darkseagreen;
+        --cca4: khaki;
+        --cca5: plum;
+        --cca6: pink;
+        --cca7: orange;
+        --cca8: mediumturquoise;
+    }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --cca1: steelblue;
+        --cca2: crimson;
+        --cca3: forestgreen;
+        --cca4: GoldenRod;
+        --cca5: indigo;
+        --cca6: darkorchid;
+        --cca7: orangered;
+        --cca8: teal;
+    }
+}
+
+.ccbgcustom{
+    color: var(--color-text);
+}
+
+.ccbg1{
+    background-color: var(--cca1);
+    color: var(--color-text);
+}
+
+.ccbg2{
+    background-color: var(--cca2);
+    color: var(--color-text);
+}
+
+.ccbg3{
+    background-color: var(--cca3);
+    color: var(--color-text);
+}
+
+.ccbg4{
+    background-color: var(--cca4);
+    color: var(--color-text);
+}
+
+.ccbg5{
+    background-color: var(--cca5);
+    color: var(--color-text);
+}
+
+.ccbg6{
+    background-color: var(--cca6);
+    color: var(--color-text);
+}
+
+.ccbg7{
+    background-color: var(--cca7);
+    color: var(--color-text);
+}
+
+.ccbg8{
+    background-color: var(--cca8);
+    color: var(--color-text);
+}

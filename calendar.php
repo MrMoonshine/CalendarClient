@@ -49,7 +49,7 @@ class Calendar{
         }
     }
     function isUserCalendar(){
-        return str_ends_with($this->calendar, $this->user."/calendar/");
+        return str_ends_with($this->calendar, $_SESSION["user"]."/calendar/");
     }
 }
 ?>

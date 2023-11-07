@@ -1,7 +1,9 @@
 :root {
-    --color-main: rgb(97, 44, 120);
+    --color-main: rgb(114, 48, 145);
+    --color-shine: rgba(255, 255, 255, 0.15);
     --color-background-1: #323232;
     --color-background-2: #222222;
+    --color-border: grey;
     --color-background-translucent: rgba(34, 34, 34, .7);
     --color-text: white;
     --color-text-button: var(--color-text);
@@ -13,6 +15,14 @@
 
     --gap-default: 12px;
     --input-border-radius: 8px;
+}
+
+body{
+    color: var(--color-text);
+    background-color: var(--color-background-2);
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 0;
+    margin: 0;
 }
 
 /* Light mode */
@@ -37,10 +47,13 @@
     }
 }
 
+.shine{
+    background-image: linear-gradient(transparent, var(--color-shine), transparent);
+}
+
 .message-box{
     background-color: var(--color-main);
     color: white;
-    font-weight: bold;
 
     border-radius: var(--gap-default);
     padding: var(--gap-default);
