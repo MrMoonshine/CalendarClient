@@ -159,7 +159,7 @@ handle_auth();
 $client = new SimpleCalDAVClient();
 try{
     $client->connect(
-        CONFIG["caldav"],
+        CONFIG["caldav"].$_SESSION["user"]."/calendar/",
         $_SESSION["user"],
         $_SESSION["passwd"]
     );
@@ -170,6 +170,7 @@ try{
         "calendars" => []
     ];    
     $calendars = $client->findCalendars();
+    var_dump($calendars);
     echo("<ul>");
     foreach ($calendars as $calendar) {
         calendarInfo($calendar);
@@ -181,7 +182,7 @@ try{
     }
     unset($calendar);
     echo("</ul>");
-    var_dump($output);
+    //var_dump($output);
 }catch (Exception $e) {
 	echo $e->__toString();
     $output["error"] = -1;
