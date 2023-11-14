@@ -53,11 +53,20 @@ nav.side header{
     border-bottom: 1px solid var(--color-border);
     background-color: var(--color-background-2);
 
-    padding: 8px;
+    padding: 0px 8px;
 }
 
 nav.side header h3{
-    margin: 0px;
+    margin: 8px 0px;
+}
+
+nav.side header button{
+    padding: 0px;
+    padding-left: 8px;
+    border-radius: 0;
+    border-left: 1px solid var(--color-border);
+    background-color: transparent;
+    font-weight: bold;
 }
 
 nav.side section{
@@ -72,4 +81,20 @@ nav.side section{
 
 .content article{
     display: block;
+}
+
+.calendarselector{
+    padding: 4px;
+}
+
+.calendarselector span.title{
+    width: 10em;
+    text-overflow: ellipsis;
+}
+
+.colordisplay{
+    height: 1em;
+    width: 2em;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
 }

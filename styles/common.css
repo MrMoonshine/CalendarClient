@@ -51,6 +51,12 @@ body{
     background-image: linear-gradient(transparent, var(--color-shine), transparent);
 }
 
+.d-flex{
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+}
+
 .message-box{
     background-color: var(--color-main);
     color: white;

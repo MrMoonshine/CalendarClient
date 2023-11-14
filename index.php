@@ -2,6 +2,8 @@
 session_start();
 require("config.php");
 require("calendar.php");
+// https://github.com/wvrzel/simpleCalDAV
+require_once("simpleCalDAV/SimpleCalDAVClient.php");
 
 function error_auth_exit($status, $msg_add = ""){
     $msg = "<b>".$status."</b>: ";
@@ -42,6 +44,39 @@ function handle_auth(){
         exit();
     }
 }
+
+function calendarInfo($calendar){
+    $name = $calendar->getDisplayName();
+    $url = $calendar->getURL();
+    $color = $calendar->getRBGcolor();
+    $order = $calendar->getOrder();
+    echo <<<CAL
+        <li>
+            <b style="color:$color;">$name</b>
+            <ul>
+                <li>URL: $url</li>
+                <li>Color: $color</li>
+                <li>Order: $order</li>
+            </ul>
+        </li>
+    CAL;
+}
+
+function eventInfo($evt){
+    $etag = $evt->getEtag();
+    $href = $evt->getHref();
+    $data = nl2br($evt->getData());
+    echo <<<EVT
+        <li>
+            <b>Oida</b>
+            <ul>
+                <li><b>Etag:</b> $etag</li>
+                <li><b>Href:</b> $href</li>
+                <li><b>data:</b><br> $data</li>
+            </ul>
+        </li>
+    EVT;
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -66,7 +101,7 @@ function handle_auth(){
         </nav>
         <div class="content">
             <nav class="side">
-                <header class="shine">
+                <header class="shine d-flex">
                     <h3>View</h3>
                 </header>
                 <section class="view">
@@ -96,16 +131,12 @@ function handle_auth(){
                         <span>Month</span>
                     </label>
                 </section>
-                <header class="shine">
+                <header class="shine d-flex">
                     <h3>Clendars</h3>
+                    <button>+</button>
                 </header>
-                <section>
-                    Calendars
+                <section id="calendarselection">
                 </section>
-                <ul>
-                    <li>oida</li>
-                    <li>oida</li>
-                </ul>
             </nav>
             <article>
                 oida
@@ -124,10 +155,47 @@ if(!isset($_SESSION["user"]) || !isset($_SESSION["passwd"])){
 
 handle_auth();
 //$pcal = new Calendar($_SESSION["user"], $_SESSION["passwd"]);
+
+$client = new SimpleCalDAVClient();
+try{
+    $client->connect(
+        CONFIG["caldav"],
+        $_SESSION["user"],
+        $_SESSION["passwd"]
+    );
+
+    $output = [
+        "error" => 0,
+        "error_message" => "",
+        "calendars" => []
+    ];    
+    $calendars = $client->findCalendars();
+    echo("<ul>");
+    foreach ($calendars as $calendar) {
+        calendarInfo($calendar);
+        array_push($output["calendars"], array(
+            "name" => $calendar->getDisplayName(),
+            "URL" => $calendar->getURL(),
+            "color" => $calendar->getRBGcolor(),
+        ));
+    }
+    unset($calendar);
+    echo("</ul>");
+    var_dump($output);
+}catch (Exception $e) {
+	echo $e->__toString();
+    $output["error"] = -1;
+    $output["error_message"] = $e->__toString();
+}
+
 echo("<p>All done!</p>");
 ?>
             </article>
         </div>
     </body>
+    <script>
+        const CALENDARLIST_JSON = '<?php echo json_encode($output); ?>';
+        const CALENDARLIST = JSON.parse(CALENDARLIST_JSON);
+    </script>
     <script src="scripts/calendar.js"></script>
 </html>
