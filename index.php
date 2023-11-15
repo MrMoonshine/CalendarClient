@@ -81,12 +81,13 @@ function eventInfo($evt){
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Anmeldung</title>
+        <title>Calendar Client</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <link rel="stylesheet" type="text/css" href="styles/common.css">
         <link rel="stylesheet" type="text/css" href="styles/input.css">
         <link rel="stylesheet" type="text/css" href="styles/main.css">
+        <link rel="stylesheet" type="text/css" href="styles/calendar.css">
     </head>
     <body>
         <script>
@@ -105,27 +106,27 @@ function eventInfo($evt){
                     <h3>View</h3>
                 </header>
                 <section class="view">
-                    <input type="radio" id="view_appointment" name="view" value="appointment" checked>
+                    <!--<input type="radio" id="view_appointment" name="view" value="appointment" checked>
                     <label for="view_appointment">
                         <img src="https://alpakagott/assets/raspberry.png" alt="rpi">
                         <span>Appointments</span>
-                    </label>
-                    <input type="radio" id="view_1d" name="view" value="1d">
+                    </label>-->
+                    <input type="radio" id="view_1d" name="view" value="1">
                     <label for="view_1d">
                         <img src="https://alpakagott/assets/konqi.png" alt="rpi">
                         <span>Day</span>
                     </label>
-                    <input type="radio" id="view_3d" name="view" value="3d">
+                    <input type="radio" id="view_3d" name="view" value="3" checked>
                     <label for="view_3d">
                         <img src="https://alpakagott/assets/konqi.png" alt="rpi">
                         <span>3 Days</span>
                     </label>
-                    <input type="radio" id="view_week" name="view" value="week">
+                    <input type="radio" id="view_week" name="view" value="7">
                     <label for="view_week">
                         <img src="https://alpakagott/assets/konqi.png" alt="rpi">
                         <span>Week</span>
                     </label>
-                    <input type="radio" id="view_month" name="view" value="month">
+                    <input type="radio" id="view_month" name="view" value="30">
                     <label for="view_month">
                         <img src="https://alpakagott/assets/konqi.png" alt="rpi">
                         <span>Month</span>
@@ -138,7 +139,7 @@ function eventInfo($evt){
                 <section id="calendarselection">
                 </section>
             </nav>
-            <article>
+            <article id="calendarspace">
                 oida
 <?php
 if(isset($_GET["logout"])){
@@ -158,32 +159,61 @@ handle_auth();
 
 $client = new SimpleCalDAVClient();
 try{
+    // Session must be opened with user in URL, otherwise, the first user is selected
     $client->connect(
-        CONFIG["caldav"].$_SESSION["user"]."/calendar/",
+        CONFIG["caldav"].$_SESSION["user"],
         $_SESSION["user"],
         $_SESSION["passwd"]
     );
-
+    // Return object for JS
     $output = [
         "error" => 0,
         "error_message" => "",
         "calendars" => []
-    ];    
+    ];
+    // Start searching
     $calendars = $client->findCalendars();
-    var_dump($calendars);
-    echo("<ul>");
+
+    $testcal = new CalDAVCalendar("/davical/caldav.php/david/schichtplan/", "Test 1");
+    $testcal->setRBGcolor("#ffdd11");
+    array_push($calendars, $testcal);
+
     foreach ($calendars as $calendar) {
-        calendarInfo($calendar);
-        array_push($output["calendars"], array(
-            "name" => $calendar->getDisplayName(),
-            "URL" => $calendar->getURL(),
-            "color" => $calendar->getRBGcolor(),
-        ));
+        try{
+            //calendarInfo($calendar);
+            // Set default color if none is set
+            $color = $calendar->getRBGcolor();
+            if(strlen($color) < 1){
+                $color = CONFIG["color_default"];
+            }
+            // Build object from calendar data
+            array_push($output["calendars"], array(
+                "name" => $calendar->getDisplayName(),
+                "URL" => $calendar->getURL(),
+                "color" => $color,
+                "error" => 0,
+                "error_message" => ""
+            ));
+        }catch(Exception $e){
+            //echo $e->__toString();
+            // Build error data
+            array_push($output["calendars"], array(
+                "name" => "",
+                "URL" => "",
+                "color" => "red",
+                "error" => -1,
+                "error_message" => $e->getResponseHeader()
+            ));
+        }
     }
     unset($calendar);
-    echo("</ul>");
-    //var_dump($output);
 }catch (Exception $e) {
+    //echo("<p>".$e->getResponseHeader()."</p>");
+    $rhead = $e->getResponseHeader();
+    // 401 and Unauthorized
+    if(strstr($rhead, "401") && strstr($rhead, "nauth")){
+        error_auth_exit(401);
+    }
 	echo $e->__toString();
     $output["error"] = -1;
     $output["error_message"] = $e->__toString();
@@ -199,4 +229,5 @@ echo("<p>All done!</p>");
         const CALENDARLIST = JSON.parse(CALENDARLIST_JSON);
     </script>
     <script src="scripts/calendar.js"></script>
+    <script src="scripts/view.js"></script>
 </html>

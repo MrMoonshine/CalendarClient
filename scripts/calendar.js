@@ -1,6 +1,5 @@
 class Calendar{
     static COOKIE_NAME = "calendars";
-    static COLOR_COUNT = 8;
     static COUNTER = 0;
 
     static PARENT = document.getElementById("calendarselection") ?? document.body;
@@ -13,11 +12,6 @@ class Calendar{
         this.hidden = hidden;
         this.color = color;
         this.id = Calendar.COUNTER++;
-        if(this.color.length == 0){
-            // Cycle through default colors if none are set
-            this.color = (this.id) % Calendar.COLOR_COUNT;
-        }
-
         this.buildDOM();
     }
 
