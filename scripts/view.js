@@ -1,14 +1,22 @@
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
 function sameDay(date1, date2){
     return date1.getFullYear() === date2.getFullYear() &&
     date1.getMonth() === date2.getMonth() &&
     date1.getDate() === date2.getDate();
 }
 
-class DayTable{
+function timeSet0(date){
+    date.setHours(0);
+    date.setMinutes(0);
+    date.setSeconds(0);
+    date.setMilliseconds(0);
+    return date;
+}
+
+class CalendarTable{
     table;
     static MS_DAY = 60 * 60 * 24 * 1000;
+    static WEEK_COUNT_MONTH_VIEW = 6;
+
     constructor(days, start = null){
         this.dayCount = days;
         this.days = [];         // This is an array of dates, used to set days
@@ -23,34 +31,79 @@ class DayTable{
     }
 
     setDays(days){
-        this.dayCount = days;
+        this.dayCount = parseInt(days);
         this.clear();
         let trh = document.createElement("tr");
         this.thead.appendChild(trh);
-        // include an empty one for the clock on the left side
-        trh.appendChild(document.createElement("th"));
-        for(let i = 0; i < this.dayCount; i++){
-            let th = document.createElement("th");
-            let date = new Date(this.start.getTime() + DayTable.MS_DAY * i);
-            // format date
-            th.innerHTML = date.toLocaleString('default', {weekday: "short", day:"numeric", month: 'short'});
-            trh.appendChild(th);
-        }
-        // A row for each hour of the day
-        for(let i = 0; i < 24; i++){
-            let date = new Date();
-            date.setMinutes(0);
-            date.setHours(i);
 
-            let dateth = document.createElement("th");
-            dateth.innerHTML = date.toLocaleString('default', {hour: "2-digit", minute: "2-digit", hour12: false});
-
-            let tr = document.createElement("tr");
-            tr.appendChild(dateth);
+        this.table.classList.remove("month");
+        
+        // Check if there should be a month table made
+        if(this.dayCount < 30){
+            // include an empty one for the clock on the left side
+            trh.appendChild(document.createElement("th"));
             for(let i = 0; i < this.dayCount; i++){
-                tr.appendChild(document.createElement("td"));
-            }            
-            this.tbody.appendChild(tr);
+                let th = document.createElement("th");
+                let date = new Date(this.start.getTime() + CalendarTable.MS_DAY * i);
+                // format date
+                th.innerHTML = date.toLocaleString('default', {weekday: "short", day:"numeric", month: 'short'});
+                trh.appendChild(th);
+            }
+            // A row for each hour of the day
+            for(let i = 0; i < 24; i++){
+                let date = new Date();
+                date.setMinutes(0);
+                date.setHours(i);
+
+                let dateth = document.createElement("th");
+                dateth.classList.add("time");
+                dateth.innerHTML = date.toLocaleString('default', {hour: "2-digit", minute: "2-digit", hour12: false});
+
+                let tr = document.createElement("tr");
+                tr.appendChild(dateth);
+                for(let i = 0; i < this.dayCount; i++){
+                    tr.appendChild(document.createElement("td"));
+                }            
+                this.tbody.appendChild(tr);
+            }
+        }else{
+            /*
+                Month Table
+            */
+            this.start = this.getStartDate(this.start ?? new Date());
+            this.table.classList.add("month");
+            // jump at least a week ahead to be in the current month
+            let month_date = new Date(this.start.getTime() + CalendarTable.MS_DAY * 7);
+            let month = month_date.getMonth();
+            console.log(this.start);
+            // For each week day
+            for(let i = 0; i < 7; i++){
+                let th = document.createElement("th");
+                let date = new Date(this.start.getTime() + CalendarTable.MS_DAY * i);
+                // format date
+                th.innerHTML = date.toLocaleString('default', {weekday: "long"});
+                trh.appendChild(th);
+            }
+            /*
+                Days
+            */
+            for(let i = 0; i < CalendarTable.WEEK_COUNT_MONTH_VIEW; i++){
+                let tr = document.createElement("tr");
+                this.tbody.appendChild(tr);
+                // for each day of the week
+                for(let d = 0; d < 7; d++){
+                    let td = document.createElement("td");
+                    let number = document.createElement("number");
+                    let day = new Date(this.start.getTime() + CalendarTable.MS_DAY * (i*7 + d));
+                    number.innerHTML = day.getDate();
+                    // if the day is not in the shown month
+                    if(day.getMonth() != month){
+                        td.classList.add("shade");
+                    }
+                    td.appendChild(number);
+                    tr.appendChild(td);
+                }
+            }
         }
     }
 
@@ -71,16 +124,40 @@ class DayTable{
     */
     getStartDate(date){
         const MONDAY = 1;
+        //console.log(this.dayCount);
         switch(this.dayCount){
             case 7: {
                 let diff = MONDAY - date.getDay();
                 // add/substract a day in ms
-                return new Date(date.getTime() + DayTable.MS_DAY * diff);
+                return new Date(date.getTime() + CalendarTable.MS_DAY * diff);
             } break;
-            default: {
-                return date;
+            case 30: {
+                // Substract until date is a monday
+                let y = date.getFullYear();
+                let m = date.getMonth();
+                date = new Date(y, m, 1);
+
+                let limit = 16;
+                while(date.getDay() != MONDAY && limit--){
+                    date.setTime(date.getTime() - CalendarTable.MS_DAY);
+                }
             }break;
+            default: break;
         }
+        date = timeSet0(date);
+        return date;
+    }
+
+    // returns [startdate, enddate]
+    getDateInterval(){
+        this.start = timeSet0(this.start);
+        let ret = [this.start, new Date(this.start.getTime() + CalendarTable.MS_DAY * this.dayCount)];
+        // month
+        if(this.dayCount == 30){
+            let diff = CalendarTable.WEEK_COUNT_MONTH_VIEW * 7 * CalendarTable.MS_DAY;
+            ret[1] = new Date(this.start.getTime() + diff);
+        }
+        return ret;
     }
 }
 
@@ -88,16 +165,19 @@ class View{
     static PARENT = document.getElementById("calendarspace") ?? document.body;
     static xDown = null;
     static yDown = null;
-    constructor(days = 3){
+    static DAYS_DEFAULT = 3;
+    constructor(days = View.DAYS_DEFAULT, calendars = []){
         this.start = new Date();
         this.end = new Date();
         
         this.dom = document.createElement("div");
+        this.setCalendars(calendars);
         View.PARENT.appendChild(this.dom);
 
-        this.table = new DayTable(days);
-        //this.dom.append();
+        this.table = new CalendarTable();
+        
         this.dom.append(this.table.dom);
+        this.setDays(days);
 
         View.xDown = null;
         View.yDown = null;
@@ -108,6 +188,28 @@ class View{
     setDays(days){
         this.days = days;
         this.table.setDays(this.days);
+        let bounds = this.table.getDateInterval();
+        this.calendars.forEach(calendar => {
+            calendar.update(bounds);
+        });
+    }
+    /*
+        Set calendars
+    */
+    setCalendars(calendars){
+        this.calendars = calendars;
+    }
+    /*
+        Use this function to specify the name of the raido inputs, that will be used to set the range
+    */
+    setRangeRadioName(name){
+        let inps = document.querySelectorAll('input[name="' + name + '"]');
+        for(let i = 0; i < inps.length; i++){
+            inps[i].addEventListener("click", (evt) => {
+                // on value change, set the day-count
+                this.setDays(evt.target.value ?? View.DAYS_DEFAULT);
+            });
+        }
     }
 
     static getTouches(evt) {
@@ -160,5 +262,3 @@ class View{
 }
 document.addEventListener('touchstart', View.touchStart, false);
 document.addEventListener('touchmove', View.touchMove, false);
-
-let v1 = new View(3);

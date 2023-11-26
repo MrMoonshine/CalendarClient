@@ -21,6 +21,7 @@
 table{
     border-collapse: collapse;
     width: calc(100vw - 16em);
+    table-layout: fixed;
 }
 
 table th, table td{
@@ -33,4 +34,25 @@ table td{
 
 table tbody tr{
     height: calc(90vh / 24);
+}
+
+table th.time{
+    font-weight: lighter;
+    font-size: small;
+    width: 2.5rem;
+}
+
+table.month td{
+    position: relative;
+    height: calc(90vh/6);
+}
+
+td.shade{
+    color: var(--color-border);
+}
+
+td number{
+    position: absolute;
+    top: 4px;
+    right: 4px;
 }

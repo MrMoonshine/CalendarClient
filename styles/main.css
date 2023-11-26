@@ -1,5 +1,6 @@
 body{
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 nav.top{
@@ -81,6 +82,7 @@ nav.side section{
 
 .content article{
     display: block;
+    position: relative;
 }
 
 .calendarselector{

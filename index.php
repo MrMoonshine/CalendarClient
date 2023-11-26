@@ -1,7 +1,6 @@
 <?php
 session_start();
 require("config.php");
-require("calendar.php");
 // https://github.com/wvrzel/simpleCalDAV
 require_once("simpleCalDAV/SimpleCalDAVClient.php");
 
@@ -190,6 +189,7 @@ try{
             array_push($output["calendars"], array(
                 "name" => $calendar->getDisplayName(),
                 "URL" => $calendar->getURL(),
+                "id" => $calendar->getCalendarID(),
                 "color" => $color,
                 "error" => 0,
                 "error_message" => ""
@@ -200,6 +200,7 @@ try{
             array_push($output["calendars"], array(
                 "name" => "",
                 "URL" => "",
+                "id" => -1,
                 "color" => "red",
                 "error" => -1,
                 "error_message" => $e->getResponseHeader()
@@ -230,4 +231,5 @@ echo("<p>All done!</p>");
     </script>
     <script src="scripts/calendar.js"></script>
     <script src="scripts/view.js"></script>
+    <script src="scripts/main.js"></script>
 </html>
