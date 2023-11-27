@@ -229,6 +229,7 @@ echo("<p>All done!</p>");
         const CALENDARLIST_JSON = '<?php echo json_encode($output); ?>';
         const CALENDARLIST = JSON.parse(CALENDARLIST_JSON);
     </script>
+    <script src="scripts/node_modules/ical.js/build/ical.min.js"></script>
     <script src="scripts/calendar.js"></script>
     <script src="scripts/view.js"></script>
     <script src="scripts/main.js"></script>

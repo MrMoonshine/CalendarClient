@@ -18,8 +18,7 @@ class CalendarTable{
     static WEEK_COUNT_MONTH_VIEW = 6;
 
     constructor(days, start = null){
-        this.dayCount = days;
-        this.days = [];         // This is an array of dates, used to set days
+        this.dayCount = days;      // Number of days
         // Correct start date, in case of week or month view
         this.start = this.getStartDate(start ?? new Date());
         this.table = document.createElement("table");
@@ -107,8 +106,17 @@ class CalendarTable{
         }
     }
 
+    addEvent(calendar, data){
+        //console.table(calendar);
+        console.log(data);
+        var jcalData = ICAL.parse(data);
+        var vcalendar = new ICAL.Component(jcalData);
+        var vevent = vcalendar.getFirstSubcomponent('vevent');
+        var summary = vevent.getFirstPropertyValue('summary');
+        console.log('Summary: ' + summary);
+    }
+
     clear(){
-        this.days = [];
         this.thead.innerHTML = "";
         this.tbody.innerHTML = "";
     }
@@ -190,7 +198,7 @@ class View{
         this.table.setDays(this.days);
         let bounds = this.table.getDateInterval();
         this.calendars.forEach(calendar => {
-            calendar.update(bounds);
+            calendar.update(bounds, this.table.addEvent);
         });
     }
     /*

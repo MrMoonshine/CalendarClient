@@ -39,17 +39,39 @@ class Calendar{
     /*
         @brief Fetch data from DAViCal server via the php backend
         @param bounds [Date, Date] interval for calendar search
+        @param callback(Calendar calendar, String data) function used to populate a calendar table by providing raw data of an appointment
     */
-    update(bounds){
+    update(bounds, callback){
         //console.log(Calendar.date2iCal(bounds[0]));
         //console.log(Calendar.date2iCal(bounds[1]));
+        this.spinner.style.display = "unset";
         this.api.searchParams.append("calendar", this.url);
         this.api.searchParams.append("start", Calendar.date2iCal(bounds[0]));
         this.api.searchParams.append("end", Calendar.date2iCal(bounds[1]));
         
         let req = new XMLHttpRequest();
         req.addEventListener("load", (e) => {
-            console.log(e.originalTarget.responseText);
+            this.setError();
+            // Checking HTTP status
+            if(e.originalTarget.status != 200){
+                let msg = e.originalTarget.status + " " + e.originalTarget.statusText;
+                console.error(msg);
+                this.setError(msg);
+                return;
+            }
+            let data = JSON.parse(e.originalTarget.responseText);
+            // Check data status
+            if(data.error != 0){
+                let msg = "Error: " + data.error_message + "!";
+                console.error(msg);
+                this.setError(msg);
+                return;
+            }
+            // add appointments
+            data.events.forEach(appointment => {
+                callback(this, appointment.data);
+            });
+            this.spinner.style.display = "none";
         });
 
         req.open("GET", this.api);
@@ -63,17 +85,42 @@ class Calendar{
         container.classList.add("calendarselector");
         container.classList.add("d-flex");
 
-        let title = document.createElement("span");
-        title.classList.add("title");
-        title.innerHTML = this.name;
+        this.titledisplay = document.createElement("span");
+        this.titledisplay.classList.add("title");
+        this.titledisplay.innerHTML = this.name;
 
         this.colordisplay = document.createElement("span");
         this.colordisplay.classList.add("colordisplay");
         this.setColor(this.color);
 
-        container.appendChild(title);
+        this.spinner = document.createElement("span");
+        this.spinner.classList.add("spinner");
+        this.spinner.style.display = "none";
+
+        container.appendChild(this.titledisplay);
+        container.appendChild(this.spinner);
         container.appendChild(this.colordisplay);
+
+        this.errordisplay = document.createElement("code");
+        this.errordisplay.classList.add("errordisplay");
+        this.setError();
+
         Calendar.PARENT.appendChild(container);
+        Calendar.PARENT.appendChild(this.errordisplay);
+    }
+
+    // Sets the error message. If no parameter is set, clear it
+    setError(text = ""){
+        const ERROR_CLASS = "error-text";
+        
+        this.errordisplay.innerHTML = text;
+        if(text.length < 1){
+            this.errordisplay.style.display = "none";
+            this.titledisplay.classList.remove(ERROR_CLASS);
+            return;
+        }        
+        this.errordisplay.style.display = "unset";
+        this.titledisplay.classList.add(ERROR_CLASS);
     }
 
     static fromList(clist){

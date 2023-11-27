@@ -21,7 +21,6 @@
 table{
     border-collapse: collapse;
     width: calc(100vw - 16em);
-    table-layout: fixed;
 }
 
 table th, table td{
@@ -40,6 +39,10 @@ table th.time{
     font-weight: lighter;
     font-size: small;
     width: 2.5rem;
+}
+
+table.month{
+    table-layout: fixed;
 }
 
 table.month td{
