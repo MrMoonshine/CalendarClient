@@ -4,6 +4,88 @@ function number2strpad(num, len){
     return num;
 }
 
+class Appointment{
+    constructor(parent, raw){
+        this.calendar = parent;
+        this.href = raw.href;
+        this.etag = raw.etag;
+        this.data = raw.data;
+
+        // Parsing ICAL data
+        this.data = this.data.replace("Vienna", "Istanbul"); //Timezone lab
+        console.log(this.data);
+        var jcalData = ICAL.parse(this.data);
+        var vcalendar = new ICAL.Component(jcalData);
+        var vevent = vcalendar.getFirstSubcomponent('vevent');
+    
+        this.summary = vevent.getFirstPropertyValue('summary');
+        this.description = vevent.getFirstPropertyValue('description');
+        // Get Times
+        this.dtstart = Appointment.getDateFromProperty(
+            vevent.getFirstProperty('dtstart')
+        );
+        this.dtend = Appointment.getDateFromProperty(
+            vevent.getFirstProperty('dtend')
+        );
+        this.dtstamp = Appointment.getDateFromProperty(
+            vevent.getFirstProperty('dtstamp')
+        );
+        // Validate calendar
+        this.valid = this.dtstart && this.dtend;
+        this.error_message = "";
+        if(this.valid){
+            this.valid &&= this.dtstart < this.dtend;
+            this.error_message = "End before Start";
+        }else{
+            this.error_message = "DTSTART or DTEND is absent!"; 
+        }
+    }
+    // Returns UTC offset in milliseconds
+    // If no name, calculate UTC-diff to local timezone
+    static getTimezoneOffset(name = null){
+        //console.log(name);
+        let now = new Date();
+
+        let date0 = new Date(now.toLocaleString("en", {timeZone: "UTC"}));
+        let date1 = name ? new Date(now.toLocaleString("en", {timeZone: name})) : structuredClone(now);
+
+        //console.log("UTC: " + date0.toLocaleString("de", {timeZone: "UTC"}) + " compared to "+ name +":" + date1.toLocaleString("de", {timeZone: "UTC"}));
+        return date1.getTime() - date0.getTime();
+    }
+
+    static getDateFromProperty(prop){
+        let jCal = prop.jCal;
+        if(!jCal){
+            return null;
+        }
+        if(jCal.length < 3){
+            return null;
+        }
+
+        let name = jCal[0];     // Name of the prperty
+        let meta = jCal[1];     // contains the tzid variable in case a timezone is set
+        let type = jCal[2];     // Type of the prop
+        let value = jCal[3];    // Value
+
+        let date = new Date(value);
+        if(meta.tzid){
+            if(!value.endsWith("Z")){
+                value += "Z";
+            }
+            let offset = Appointment.getTimezoneOffset(meta.tzid);
+            let localOffset = Appointment.getTimezoneOffset();
+            // Calculate the Offset to the date
+            date = new Date(date.getTime() - (offset - localOffset));
+        }else{
+            // No timezone provided, fall back to UTC
+            date = new Date(date.toLocaleString("en", {timeZone: "UTC"}));
+        }
+        
+        console.log(name + ": " + date.toLocaleString("de"));
+        return date;
+    }
+}
+
 class Calendar{
     static COOKIE_NAME = "calendars";
     static COUNTER = 0;
@@ -17,6 +99,7 @@ class Calendar{
         this.passwd = passwd;
         this.hidden = hidden;
         this.color = color;
+        this.appointments = [];
         this.id = Calendar.COUNTER++;
         this.buildDOM();
 
@@ -69,7 +152,8 @@ class Calendar{
             }
             // add appointments
             data.events.forEach(appointment => {
-                callback(this, appointment.data);
+                this.appointments.push(new Appointment(this, appointment));
+                //callback(this, appointment);
             });
             this.spinner.style.display = "none";
         });
@@ -138,7 +222,7 @@ class Calendar{
         });
         return ret;
     }
-    // maes a date UTC+0 and converts to yyyymmddThhmmssZ
+    // makes a date UTC+0 and converts to yyyymmddThhmmssZ
     static date2iCal(date){
         let out = number2strpad(date.getUTCFullYear(), 4);
         out += number2strpad(date.getUTCMonth() + 1, 2);

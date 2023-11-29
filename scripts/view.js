@@ -106,14 +106,9 @@ class CalendarTable{
         }
     }
 
-    addEvent(calendar, data){
+    addEvent(calendar, appointment){
         //console.table(calendar);
-        console.log(data);
-        var jcalData = ICAL.parse(data);
-        var vcalendar = new ICAL.Component(jcalData);
-        var vevent = vcalendar.getFirstSubcomponent('vevent');
-        var summary = vevent.getFirstPropertyValue('summary');
-        console.log('Summary: ' + summary);
+        console.log(appointment.data);
     }
 
     clear(){
