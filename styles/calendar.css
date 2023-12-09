@@ -1,3 +1,7 @@
+:root{
+    --appointment-radius: 8px
+}
+
 .view-appointment-day{
     display: block;
     height: 48px;
@@ -32,7 +36,7 @@ table td{
 }
 
 table tbody tr{
-    height: calc(90vh / 24);
+    height: calc(120vh / 24);
 }
 
 table th.time{
@@ -58,4 +62,45 @@ td number{
     position: absolute;
     top: 4px;
     right: 4px;
+}
+
+table td{
+    position: relative;
+    padding: 0px 4px;
+}
+
+table .appointment{
+    border: 1px solid var(--color-border);
+    border-radius: var(--appointment-radius);
+    box-sizing: border-box;
+
+    width: calc(100% - var(--appointment-radius));
+    position: absolute;
+    padding: var(--appointment-radius);
+    top: 0px;
+    left: 4px;
+    overflow: hidden;
+}
+
+table .appointment p{
+    margin: 0px;
+    font-size: small;
+}
+
+table .appointment.openbottom{
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-bottom: 0px solid black;
+}
+
+table .appointment.opentop{
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+    border-top: 0px solid black;
+}
+
+table tr.whole-days .appointment{
+    position: relative;
+    display: block;
+    margin: 4px 0px;
 }

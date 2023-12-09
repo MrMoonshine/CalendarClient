@@ -1,19 +1,55 @@
-function number2strpad(num, len){
-    num = num.toString();
-    num = num.padStart(len, "0");
-    return num;
+class Common{
+    static MS_SEC = 1000;
+    static MS_MIN = Common.MS_SEC * 60;
+    static MS_HOUR = Common.MS_MIN * 60;
+    static MS_DAY = Common.MS_HOUR * 24;
+
+    static number2strpad(num, len){
+        num = num.toString();
+        num = num.padStart(len, "0");
+        return num;
+    }
+
+    static sameDay(date1_i, date2_i){
+        let date1 = structuredClone(date1_i);
+        let date2 = structuredClone(date2_i);
+        return date1.getFullYear() === date2.getFullYear() &&
+        date1.getMonth() === date2.getMonth() &&
+        date1.getDate() === date2.getDate();
+    }
+
+    static addDays(date, days){
+        return new Date(date.getTime() + days * Common.MS_DAY);
+    }
+
+    static timeSet0(date_i){
+        let date = structuredClone(date_i);
+        date.setHours(0);
+        date.setMinutes(0);
+        date.setSeconds(0);
+        date.setMilliseconds(0);
+        return date;
+    }
+
+    static round(number, lead){
+        const pot = Math.pow(10, lead);
+        return Math.round(pot*number)/pot;
+    }
 }
 
 class Appointment{
+    dom;
     constructor(parent, raw){
         this.calendar = parent;
         this.href = raw.href;
         this.etag = raw.etag;
         this.data = raw.data;
 
+        this.dom = [];
+
         // Parsing ICAL data
-        this.data = this.data.replace("Vienna", "Istanbul"); //Timezone lab
-        console.log(this.data);
+        //this.data = this.data.replace("Vienna", "Istanbul"); //Timezone lab
+        //console.log(this.data);
         var jcalData = ICAL.parse(this.data);
         var vcalendar = new ICAL.Component(jcalData);
         var vevent = vcalendar.getFirstSubcomponent('vevent');
@@ -40,6 +76,48 @@ class Appointment{
             this.error_message = "DTSTART or DTEND is absent!"; 
         }
     }
+
+    /*
+        @brief builds calendar entries
+        @param start CalendarTableCell start cell
+        @param end CalendarTableCell end cell
+    */
+    /*buildDom(start, end){
+        const MS_HOURS = 60 * 60 * 1000;
+        let tsdiff = (this.dtstart.getTime() - start.start.getTime()) / MS_HOURS;
+        let tediff = (this.dtstart.getTime() - end.start.getTime()) / MS_HOURS;
+
+        let div = document.createElement("div");
+    }*/
+    durationH(){
+        return (this.dtend.getTime() - this.dtstart.getTime())/Common.MS_HOUR;
+    }
+
+    /*
+        @brief checks if the appointment last a whole day
+        @returns true if whole day
+    */
+    wholeDay(){
+        let deltah = this.durationH();
+        // check if duration is ok
+        if(deltah % 24){
+            return false;
+        }
+        // check if it starts at 00:00:00
+        return this.dtstart.getHours() == 0 && this.dtstart.getMinutes() == 0;
+    }
+
+    destroyDom(){
+        for(let i = 0; i < this.dom.length; i++){
+            this.dom[i].remove();
+        }
+        this.dom = [];
+    }
+
+    get dom(){
+        return this.dom;
+    }
+
     // Returns UTC offset in milliseconds
     // If no name, calculate UTC-diff to local timezone
     static getTimezoneOffset(name = null){
@@ -81,7 +159,7 @@ class Appointment{
             date = new Date(date.toLocaleString("en", {timeZone: "UTC"}));
         }
         
-        console.log(name + ": " + date.toLocaleString("de"));
+        //console.log(name + ": " + date.toLocaleString("de"));
         return date;
     }
 }
@@ -99,7 +177,7 @@ class Calendar{
         this.passwd = passwd;
         this.hidden = hidden;
         this.color = color;
-        this.appointments = [];
+        
         this.id = Calendar.COUNTER++;
         this.buildDOM();
 
@@ -119,12 +197,13 @@ class Calendar{
         this.color = color;
         this.colordisplay.style.backgroundColor = this.color;
     }
+
     /*
         @brief Fetch data from DAViCal server via the php backend
         @param bounds [Date, Date] interval for calendar search
-        @param callback(Calendar calendar, String data) function used to populate a calendar table by providing raw data of an appointment
+        @param callback(Appointment appointment) function used to populate a calendar table by providing raw data of an appointment
     */
-    update(bounds, callback){
+    update(bounds, parent, callback){
         //console.log(Calendar.date2iCal(bounds[0]));
         //console.log(Calendar.date2iCal(bounds[1]));
         this.spinner.style.display = "unset";
@@ -151,9 +230,8 @@ class Calendar{
                 return;
             }
             // add appointments
-            data.events.forEach(appointment => {
-                this.appointments.push(new Appointment(this, appointment));
-                //callback(this, appointment);
+            data.events.forEach(elem => {
+                callback(parent, new Appointment(this, elem));
             });
             this.spinner.style.display = "none";
         });
@@ -224,13 +302,13 @@ class Calendar{
     }
     // makes a date UTC+0 and converts to yyyymmddThhmmssZ
     static date2iCal(date){
-        let out = number2strpad(date.getUTCFullYear(), 4);
-        out += number2strpad(date.getUTCMonth() + 1, 2);
-        out += number2strpad(date.getUTCDate(), 2);
+        let out = Common.number2strpad(date.getUTCFullYear(), 4);
+        out += Common.number2strpad(date.getUTCMonth() + 1, 2);
+        out += Common.number2strpad(date.getUTCDate(), 2);
         out += "T";
-        out += number2strpad(date.getUTCHours(), 2);
-        out += number2strpad(date.getUTCMinutes(), 2);
-        out += number2strpad(date.getUTCSeconds(), 2);
+        out += Common.number2strpad(date.getUTCHours(), 2);
+        out += Common.number2strpad(date.getUTCMinutes(), 2);
+        out += Common.number2strpad(date.getUTCSeconds(), 2);
         out += "Z";
         return out;
     }

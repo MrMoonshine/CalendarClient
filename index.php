@@ -174,7 +174,7 @@ try{
     $calendars = $client->findCalendars();
 
     $testcal = new CalDAVCalendar("/davical/caldav.php/david/schichtplan/", "Test 1");
-    $testcal->setRBGcolor("#ffdd11");
+    $testcal->setRBGcolor("#f5761b");
     array_push($calendars, $testcal);
 
     foreach ($calendars as $calendar) {

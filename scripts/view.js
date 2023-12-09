@@ -1,23 +1,33 @@
-function sameDay(date1, date2){
-    return date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate();
-}
+class CalendarTableCell{
+    td;
+    // start date & duration in h
+    constructor(start, duration){
+        this.td = document.createElement("td");
+        this.start = structuredClone(start);
+        this.duration = duration;
+    }
 
-function timeSet0(date){
-    date.setHours(0);
-    date.setMinutes(0);
-    date.setSeconds(0);
-    date.setMilliseconds(0);
-    return date;
+    get dom(){
+        return this.td;
+    }
+
+    static compare(a, b){
+        if(a.start < b.start){
+            return -1;
+        }else if(a.start > b.start){
+            return 1;
+        }{
+            return 0;
+        }
+    }
 }
 
 class CalendarTable{
     table;
-    static MS_DAY = 60 * 60 * 24 * 1000;
     static WEEK_COUNT_MONTH_VIEW = 6;
 
     constructor(days, start = null){
+        this.cells = [];
         this.dayCount = days;      // Number of days
         // Correct start date, in case of week or month view
         this.start = this.getStartDate(start ?? new Date());
@@ -30,6 +40,7 @@ class CalendarTable{
     }
 
     setDays(days){
+        this.cells = [];
         this.dayCount = parseInt(days);
         this.clear();
         let trh = document.createElement("tr");
@@ -43,17 +54,30 @@ class CalendarTable{
             trh.appendChild(document.createElement("th"));
             for(let i = 0; i < this.dayCount; i++){
                 let th = document.createElement("th");
-                let date = new Date(this.start.getTime() + CalendarTable.MS_DAY * i);
+                let date = new Date(this.start.getTime() + Common.MS_DAY * i);
                 // format date
                 th.innerHTML = date.toLocaleString('default', {weekday: "short", day:"numeric", month: 'short'});
                 trh.appendChild(th);
             }
+            // Get start date
+            let date = new Date(this.start);
+            date.setMinutes(0);
+            date.setHours(0);
+            // For whole-day appoinments
+            let trwd = document.createElement("tr");
+            trwd.classList.add("whole-days");
+            trwd.appendChild(document.createElement("td")); // Empty element for time col
+            for(let i = 0; i < this.dayCount; i++){
+                let cell = new CalendarTableCell(
+                    Common.addDays(date, i),
+                    24
+                );
+                this.cells.push(cell);
+                trwd.appendChild(cell.dom);
+            }
+            this.tbody.appendChild(trwd);
             // A row for each hour of the day
             for(let i = 0; i < 24; i++){
-                let date = new Date();
-                date.setMinutes(0);
-                date.setHours(i);
-
                 let dateth = document.createElement("th");
                 dateth.classList.add("time");
                 dateth.innerHTML = date.toLocaleString('default', {hour: "2-digit", minute: "2-digit", hour12: false});
@@ -61,9 +85,15 @@ class CalendarTable{
                 let tr = document.createElement("tr");
                 tr.appendChild(dateth);
                 for(let i = 0; i < this.dayCount; i++){
-                    tr.appendChild(document.createElement("td"));
+                    let cell = new CalendarTableCell(
+                        Common.addDays(date, i),
+                        1
+                    );
+                    tr.appendChild(cell.dom);
+                    this.cells.push(cell);
                 }            
                 this.tbody.appendChild(tr);
+                date = new Date(date.getTime() + Common.MS_HOUR);
             }
         }else{
             /*
@@ -72,13 +102,13 @@ class CalendarTable{
             this.start = this.getStartDate(this.start ?? new Date());
             this.table.classList.add("month");
             // jump at least a week ahead to be in the current month
-            let month_date = new Date(this.start.getTime() + CalendarTable.MS_DAY * 7);
+            let month_date = new Date(this.start.getTime() + Common.MS_DAY * 7);
             let month = month_date.getMonth();
             console.log(this.start);
             // For each week day
             for(let i = 0; i < 7; i++){
                 let th = document.createElement("th");
-                let date = new Date(this.start.getTime() + CalendarTable.MS_DAY * i);
+                let date = new Date(this.start.getTime() + Common.MS_DAY * i);
                 // format date
                 th.innerHTML = date.toLocaleString('default', {weekday: "long"});
                 trh.appendChild(th);
@@ -91,24 +121,125 @@ class CalendarTable{
                 this.tbody.appendChild(tr);
                 // for each day of the week
                 for(let d = 0; d < 7; d++){
-                    let td = document.createElement("td");
                     let number = document.createElement("number");
-                    let day = new Date(this.start.getTime() + CalendarTable.MS_DAY * (i*7 + d));
+                    let day = new Date(this.start.getTime() + Common.MS_DAY * (i*7 + d));
+                    let cell = new CalendarTableCell(day, 24);
+                    this.cells.push(cell);
+
                     number.innerHTML = day.getDate();
                     // if the day is not in the shown month
                     if(day.getMonth() != month){
-                        td.classList.add("shade");
+                        cell.dom.classList.add("shade");
                     }
-                    td.appendChild(number);
-                    tr.appendChild(td);
+                    cell.dom.appendChild(number);
+                    tr.appendChild(cell.dom);
                 }
             }
         }
+        // Sort the table
+        this.cells.sort(CalendarTableCell.compare);
+        /*console.log("Lenght " + this.cells.length);
+        this.cells.forEach(elem => {
+            console.log(elem.start.toLocaleString("de"));
+        });*/
+    }
+    /*
+        @brief get the cell for a given date
+        @param date The date
+        @param wholeDay only allow fields with 24h duration
+        @return td element
+    */
+    getCell(date, wholeDay = false){
+        const start = this.cells.length - 1;
+        let ret = this.cells[start];
+        for(let i = start; i >= 0; i--){
+            let ret = this.cells[i];
+            if(
+                // only allow 1h cells if not the whole day is needed
+                ret.start <= date && ret.duration < 24 && !wholeDay ||
+                ret.start <= date && ret.duration == 24 && wholeDay
+            ){
+                if(wholeDay){
+                    console.log(ret.start.toLocaleString("de") + " < " + date.toLocaleString("de"));
+                }
+                
+                return ret;
+            }
+        }
+        return ret;
     }
 
-    addEvent(calendar, appointment){
+    static addEvent(parent, appointment){
         //console.table(calendar);
-        console.log(appointment.data);
+        //console.log(appointment.data);
+        // Week or 3 day view
+        if(parent.dayCount < 30){
+/*          +--------------------------------------+
+            |                                      |
+            |    Creating DIVs for Appointments    |
+            |            in x-Day view             |
+            |                                      |
+            +--------------------------------------+    */
+            let cell = parent.getCell(appointment.dtstart);
+
+            let current = structuredClone(appointment.dtstart);
+            current = Common.timeSet0(current);
+            let wholeDay = appointment.wholeDay();
+            //console.log(appointment.summary + ": " + (Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)));
+
+            // Step forward a day each time, until the end day is reached.
+            while(Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)){
+                let start = Common.sameDay(appointment.dtstart, current) ? appointment.dtstart : Common.timeSet0(current);
+                let end = appointment.dtend;
+                if(!Common.sameDay(current, end)){
+                    end = structuredClone(current);
+                    end.setHours(23,59,59);
+                }
+                
+                let deltah = (end.getTime() - start.getTime())/Common.MS_HOUR;
+                deltah = Common.round(deltah, 2);
+                //console.log(appointment.summary + " part has " + deltah + " hours");
+                if(deltah <= 0){
+                    // remove unnessesary stub
+                    break;
+                }
+
+                let div = document.createElement("div")
+                div.classList.add("appointment");
+                div.classList.add("shine");
+                // content
+                let b = document.createElement("b");
+                b.innerHTML = appointment.summary;
+                div.appendChild(b);
+
+                let p = document.createElement("p");
+                p.innerHTML += "von: " + appointment.dtstart.toLocaleString("de");
+                p.innerHTML += "<br>bis: " + appointment.dtend.toLocaleString("de");
+                div.appendChild(p);
+                if(!wholeDay){
+                    // make appointment style open in case it goes over date line
+                    if(!Common.sameDay(appointment.dtstart, current)){
+                        div.classList.add("opentop");
+                    }
+                    if(!Common.sameDay(appointment.dtend, current)){
+                        div.classList.add("openbottom");
+                    }
+                    div.style.height = "calc(" + (100*deltah) + "% - 2*var(--appointment-radius))";
+                }
+
+                div.style.backgroundColor = appointment.calendar.color;
+                appointment.dom.push(div);
+
+                let startcell = parent.getCell(start, wholeDay);
+                // Get the diff of start and cell in hours
+                let deltastart = (start.getTime() - startcell.start.getTime())/Common.MS_HOUR;
+                div.style.top = Math.round(100 * deltastart) + "%";
+ 
+                startcell.dom.appendChild(div);
+
+                current = Common.addDays(current, 1);
+            }
+        }
     }
 
     clear(){
@@ -132,7 +263,7 @@ class CalendarTable{
             case 7: {
                 let diff = MONDAY - date.getDay();
                 // add/substract a day in ms
-                return new Date(date.getTime() + CalendarTable.MS_DAY * diff);
+                return new Date(date.getTime() + Common.MS_DAY * diff);
             } break;
             case 30: {
                 // Substract until date is a monday
@@ -142,22 +273,22 @@ class CalendarTable{
 
                 let limit = 16;
                 while(date.getDay() != MONDAY && limit--){
-                    date.setTime(date.getTime() - CalendarTable.MS_DAY);
+                    date.setTime(date.getTime() - Common.MS_DAY);
                 }
             }break;
             default: break;
         }
-        date = timeSet0(date);
+        date = Common.timeSet0(date);
         return date;
     }
 
     // returns [startdate, enddate]
     getDateInterval(){
-        this.start = timeSet0(this.start);
-        let ret = [this.start, new Date(this.start.getTime() + CalendarTable.MS_DAY * this.dayCount)];
+        this.start = Common.timeSet0(this.start);
+        let ret = [this.start, new Date(this.start.getTime() + Common.MS_DAY * this.dayCount)];
         // month
         if(this.dayCount == 30){
-            let diff = CalendarTable.WEEK_COUNT_MONTH_VIEW * 7 * CalendarTable.MS_DAY;
+            let diff = CalendarTable.WEEK_COUNT_MONTH_VIEW * 7 * Common.MS_DAY;
             ret[1] = new Date(this.start.getTime() + diff);
         }
         return ret;
@@ -193,7 +324,7 @@ class View{
         this.table.setDays(this.days);
         let bounds = this.table.getDateInterval();
         this.calendars.forEach(calendar => {
-            calendar.update(bounds, this.table.addEvent);
+            calendar.update(bounds, this.table, CalendarTable.addEvent);
         });
     }
     /*
