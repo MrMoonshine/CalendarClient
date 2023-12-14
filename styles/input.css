@@ -73,28 +73,38 @@ button:hover{
     background-color: var(--color-background-2);
 }
 
+/*Disable Round corners for Groups, and set constant height*/
+.btn-group,
 .input-group{
     display: flex;
     flex-wrap: nowrap;
     justify-content: space-between;
+    height: 2.4rem;
 }
 
+/*
+    Don't do borders if they are in a button group
+*/
+.btn-group .btn,
 .input-group input,
-.input-group button{
-    border-radius: 0px;
+.input-group *{
+    border-radius: 0;
 }
 
 /*First element only left round corners*/
+.btn-group *:first-child,
 .input-group *:first-child{
     border-top-left-radius: var(--input-border-radius);
     border-bottom-left-radius: var(--input-border-radius);
 }
 
 /*Last element only right round corners*/
+.btn-group .btn:last-child,
 .input-group *:last-child{
     border-top-right-radius: var(--input-border-radius);
     border-bottom-right-radius: var(--input-border-radius);
 }
+
 /*------------------------------------------------------------------*/
 /*                  Radio buttons in view Selection                 */
 /*------------------------------------------------------------------*/

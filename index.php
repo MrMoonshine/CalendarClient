@@ -93,6 +93,7 @@ function eventInfo($evt){
             const CONFIG = JSON.parse('<?php echo json_encode(CONFIG); ?>');
         </script>
         <nav class="top shine">
+            <button id="nav-side-toggle" class="mobile-only">&#x2318;</button>
             <h1>Calendar Client</h1>
             <div class="links">
                 <p><a href="#"><?php echo($_SESSION["user"]); ?></a></p>
@@ -100,7 +101,7 @@ function eventInfo($evt){
             </div>
         </nav>
         <div class="content">
-            <nav class="side">
+            <nav class="side mobile-hidden">
                 <header class="shine d-flex">
                     <h3>View</h3>
                 </header>
@@ -138,8 +139,15 @@ function eventInfo($evt){
                 <section id="calendarselection">
                 </section>
             </nav>
-            <article id="calendarspace">
-                oida
+            <article>
+                <div class="d-flex justify-content-between">
+                    <div class="btn-group" id="navigator">
+                        <button type="button" class="btn shine" id="prev">&#x2B05;</button>
+                        <button type="button" class="btn shine" id="today">&#x1F4C5; Today</button>
+                        <button type="button" class="btn shine" id="next">&#x27A1;</button>
+                    </div>
+                </div>
+                <div id="calendarspace">
 <?php
 if(isset($_GET["logout"])){
     if($_GET["logout"] > 0){
@@ -220,8 +228,8 @@ try{
     $output["error_message"] = $e->__toString();
 }
 
-echo("<p>All done!</p>");
 ?>
+                </div>
             </article>
         </div>
     </body>

@@ -24,7 +24,7 @@
 
 table{
     border-collapse: collapse;
-    width: calc(100vw - 16em);
+    width: calc(100vw - 16em - 16px);
 }
 
 table th, table td{
@@ -36,7 +36,7 @@ table td{
 }
 
 table tbody tr{
-    height: calc(120vh / 24);
+    height: calc(150vh / 24);
 }
 
 table th.time{
@@ -67,6 +67,7 @@ td number{
 table td{
     position: relative;
     padding: 0px 4px;
+    box-sizing: border-box;
 }
 
 table .appointment{
@@ -99,8 +100,26 @@ table .appointment.opentop{
     border-top: 0px solid black;
 }
 
+table .appointment.openleft{
+    border-bottom-left-radius: 0px;
+    border-top-left-radius: 0px;
+    border-bottom: 0px solid black;
+}
+
+table .appointment.openright{
+    border-bottom-right-radius: 0px;
+    border-top-right-radius: 0px;
+    border-top: 0px solid black;
+}
+
 table tr.whole-days .appointment{
     position: relative;
     display: block;
     margin: 4px 0px;
+}
+
+@media only screen and (max-width: 500px){
+    table{
+        width: calc(100vw - 16px);
+    }
 }

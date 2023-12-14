@@ -1,5 +1,5 @@
 :root {
-    --color-main: rgb(114, 48, 145);
+    --color-main: #009B77;
     --color-shine: rgba(255, 255, 255, 0.15);
     --color-background-1: #323232;
     --color-background-2: #222222;
@@ -54,6 +54,10 @@ body{
 .d-flex{
     display: flex;
     flex-wrap: nowrap;
+    justify-content: space-between;
+}
+
+.justify-content-between{
     justify-content: space-between;
 }
 

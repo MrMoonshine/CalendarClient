@@ -1,6 +1,6 @@
 body{
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 
 nav.top{
@@ -46,8 +46,9 @@ nav.side{
     color: var(--color-text);
     border-right: 1px solid var(--color-border);
 
+    display: block;
     width: 16em;
-    height: 100vh;
+    height: 300vh;
 }
 
 nav.side header{
@@ -75,12 +76,30 @@ nav.side section{
     border-bottom: 1px solid var(--color-border);
 }
 
+#nav-side-toggle{
+    background-color: transparent;
+    border: 1px solid var(--color-text);
+    color: var(--color-text);
+    margin: 4px;
+}
+
 .content{
     display: flex;
     overflow: hidden;
+    position: relative;
 }
 
-.content article{
+.content > article{
+    padding: 8px;
+    overflow-y: auto;
+    height: calc(100vh - 48px - 16px);
+}
+
+#navigator{
+    margin-bottom: 8px;
+}
+
+.content #calendarspace{
     display: block;
     position: relative;
 }
@@ -125,4 +144,31 @@ nav.side section{
 
 .error-text{
     color: var(--color-critical);
+}
+
+.mobile-only{
+    display: none;
+}
+
+/* Mobile phones */
+@media only screen and (max-width: 500px){
+    nav h1{
+        font-size: 20px;
+    }
+
+    nav.side{
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        z-index: 100;
+        transition: left 0.5s;
+    }
+
+    nav.side.mobile-hidden{
+        left: -100%;
+    }
+
+    .mobile-only{
+        display: block;
+    }
 }

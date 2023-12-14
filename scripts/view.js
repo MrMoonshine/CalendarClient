@@ -39,13 +39,15 @@ class CalendarTable{
         this.setDays(this.dayCount);
     }
 
-    setDays(days){
+    setDays(days, start = null){
+        if(start){
+            this.start = start;
+        }
         this.cells = [];
         this.dayCount = parseInt(days);
         this.clear();
         let trh = document.createElement("tr");
         this.thead.appendChild(trh);
-
         this.table.classList.remove("month");
         
         // Check if there should be a month table made
@@ -159,9 +161,9 @@ class CalendarTable{
                 ret.start <= date && ret.duration < 24 && !wholeDay ||
                 ret.start <= date && ret.duration == 24 && wholeDay
             ){
-                if(wholeDay){
+                /*if(wholeDay){
                     console.log(ret.start.toLocaleString("de") + " < " + date.toLocaleString("de"));
-                }
+                }*/
                 
                 return ret;
             }
@@ -185,7 +187,7 @@ class CalendarTable{
             let current = structuredClone(appointment.dtstart);
             current = Common.timeSet0(current);
             let wholeDay = appointment.wholeDay();
-            //console.log(appointment.summary + ": " + (Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)));
+            console.log(appointment.summary + ": " + (Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)));
 
             // Step forward a day each time, until the end day is reached.
             while(Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)){
@@ -199,7 +201,10 @@ class CalendarTable{
                 let deltah = (end.getTime() - start.getTime())/Common.MS_HOUR;
                 deltah = Common.round(deltah, 2);
                 //console.log(appointment.summary + " part has " + deltah + " hours");
-                if(deltah <= 0){
+                if(
+                    deltah <= 0 ||
+                    current >= Common.addDays(parent.start, parent.dayCount)
+                ){
                     // remove unnessesary stub
                     break;
                 }
@@ -224,7 +229,7 @@ class CalendarTable{
                     if(!Common.sameDay(appointment.dtend, current)){
                         div.classList.add("openbottom");
                     }
-                    div.style.height = "calc(" + (100*deltah) + "% - 2*var(--appointment-radius))";
+                    div.style.height = "calc(" + (100*deltah) + "% +  var(--appointment-radius))";
                 }
 
                 div.style.backgroundColor = appointment.calendar.color;
@@ -319,9 +324,12 @@ class View{
     /*
         Set the number of days displayed. e.g 1 day, 3 days or 7 for the week. Start will be picked automatically
     */
-    setDays(days){
+    setDays(days, start){
+        if(start){
+            this.start = start;
+        }
         this.days = days;
-        this.table.setDays(this.days);
+        this.table.setDays(this.days, this.start);
         let bounds = this.table.getDateInterval();
         this.calendars.forEach(calendar => {
             calendar.update(bounds, this.table, CalendarTable.addEvent);
@@ -344,6 +352,31 @@ class View{
                 this.setDays(evt.target.value ?? View.DAYS_DEFAULT);
             });
         }
+    }
+
+    addPage(j){
+        console.log("Adding " + j + " pages");
+        if(j < 0){
+            let di = this.table.getDateInterval();
+            let diff = di[1].getTime() - di[0].getTime();
+            let start = new Date(di[0].getTime() - diff);
+            this.setDays(this.days, start);
+        }else if(j > 0){
+            let di = this.table.getDateInterval();
+            this.setDays(this.days, di[1]);
+        }
+    }
+
+    prev(){
+        this.addPage(-1);
+    }
+
+    next(){
+        this.addPage(1);
+    }
+
+    today(){
+        this.setDays(this.days, new Date());
     }
 
     static getTouches(evt) {
