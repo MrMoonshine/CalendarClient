@@ -1,32 +1,35 @@
-class CalendarTableCell{
+class CalendarTableCell {
     td;
     // start date & duration in h
-    constructor(start, duration){
+    constructor(start, duration) {
         this.td = document.createElement("td");
         this.start = structuredClone(start);
+        this.start.setSeconds(0);
+        this.start.setMilliseconds(0);
         this.duration = duration;
     }
 
-    get dom(){
+    get dom() {
         return this.td;
     }
 
-    static compare(a, b){
-        if(a.start < b.start){
+    static compare(a, b) {
+        if (a.start < b.start) {
             return -1;
-        }else if(a.start > b.start){
+        } else if (a.start > b.start) {
             return 1;
-        }{
+        } {
             return 0;
         }
     }
 }
 
-class CalendarTable{
+class CalendarTable {
     table;
     static WEEK_COUNT_MONTH_VIEW = 6;
+    static monthWidget = document.getElementById("month-widget");
 
-    constructor(days, start = null){
+    constructor(days, start = null) {
         this.cells = [];
         this.dayCount = days;      // Number of days
         // Correct start date, in case of week or month view
@@ -39,8 +42,8 @@ class CalendarTable{
         this.setDays(this.dayCount);
     }
 
-    setDays(days, start = null){
-        if(start){
+    setDays(days, start = null) {
+        if (start) {
             this.start = start;
         }
         this.cells = [];
@@ -49,16 +52,17 @@ class CalendarTable{
         let trh = document.createElement("tr");
         this.thead.appendChild(trh);
         this.table.classList.remove("month");
-        
+
         // Check if there should be a month table made
-        if(this.dayCount < 30){
+        if (this.dayCount < 30) {
+            this.monthWidgetHide();
             // include an empty one for the clock on the left side
             trh.appendChild(document.createElement("th"));
-            for(let i = 0; i < this.dayCount; i++){
+            for (let i = 0; i < this.dayCount; i++) {
                 let th = document.createElement("th");
                 let date = new Date(this.start.getTime() + Common.MS_DAY * i);
                 // format date
-                th.innerHTML = date.toLocaleString('default', {weekday: "short", day:"numeric", month: 'short'});
+                th.innerHTML = date.toLocaleString('default', { weekday: "short", day: "numeric", month: 'short' });
                 trh.appendChild(th);
             }
             // Get start date
@@ -69,7 +73,7 @@ class CalendarTable{
             let trwd = document.createElement("tr");
             trwd.classList.add("whole-days");
             trwd.appendChild(document.createElement("td")); // Empty element for time col
-            for(let i = 0; i < this.dayCount; i++){
+            for (let i = 0; i < this.dayCount; i++) {
                 let cell = new CalendarTableCell(
                     Common.addDays(date, i),
                     24
@@ -79,25 +83,25 @@ class CalendarTable{
             }
             this.tbody.appendChild(trwd);
             // A row for each hour of the day
-            for(let i = 0; i < 24; i++){
+            for (let i = 0; i < 24; i++) {
                 let dateth = document.createElement("th");
                 dateth.classList.add("time");
-                dateth.innerHTML = date.toLocaleString('default', {hour: "2-digit", minute: "2-digit", hour12: false});
+                dateth.innerHTML = date.toLocaleString('default', { hour: "2-digit", minute: "2-digit", hour12: false });
 
                 let tr = document.createElement("tr");
                 tr.appendChild(dateth);
-                for(let i = 0; i < this.dayCount; i++){
+                for (let i = 0; i < this.dayCount; i++) {
                     let cell = new CalendarTableCell(
                         Common.addDays(date, i),
                         1
                     );
                     tr.appendChild(cell.dom);
                     this.cells.push(cell);
-                }            
+                }
                 this.tbody.appendChild(tr);
                 date = new Date(date.getTime() + Common.MS_HOUR);
             }
-        }else{
+        } else {
             /*
                 Month Table
             */
@@ -106,31 +110,36 @@ class CalendarTable{
             // jump at least a week ahead to be in the current month
             let month_date = new Date(this.start.getTime() + Common.MS_DAY * 7);
             let month = month_date.getMonth();
-            console.log(this.start);
+            //console.log(this.start);
+            // Display current month and year
+            this.monthWidgetShow(month_date.toLocaleString("default", {
+                month: "long",
+                year: "numeric"
+            }));
             // For each week day
-            for(let i = 0; i < 7; i++){
+            for (let i = 0; i < 7; i++) {
                 let th = document.createElement("th");
                 let date = new Date(this.start.getTime() + Common.MS_DAY * i);
                 // format date
-                th.innerHTML = date.toLocaleString('default', {weekday: "long"});
+                th.innerHTML = date.toLocaleString('default', { weekday: "long" });
                 trh.appendChild(th);
             }
             /*
                 Days
             */
-            for(let i = 0; i < CalendarTable.WEEK_COUNT_MONTH_VIEW; i++){
+            for (let i = 0; i < CalendarTable.WEEK_COUNT_MONTH_VIEW; i++) {
                 let tr = document.createElement("tr");
                 this.tbody.appendChild(tr);
                 // for each day of the week
-                for(let d = 0; d < 7; d++){
+                for (let d = 0; d < 7; d++) {
                     let number = document.createElement("number");
-                    let day = new Date(this.start.getTime() + Common.MS_DAY * (i*7 + d));
+                    let day = new Date(this.start.getTime() + Common.MS_DAY * (i * 7 + d));
                     let cell = new CalendarTableCell(day, 24);
                     this.cells.push(cell);
 
                     number.innerHTML = day.getDate();
                     // if the day is not in the shown month
-                    if(day.getMonth() != month){
+                    if (day.getMonth() != month) {
                         cell.dom.classList.add("shade");
                     }
                     cell.dom.appendChild(number);
@@ -151,108 +160,144 @@ class CalendarTable{
         @param wholeDay only allow fields with 24h duration
         @return td element
     */
-    getCell(date, wholeDay = false){
+    getCell(date, wholeDay = false) {
         const start = this.cells.length - 1;
         let ret = this.cells[start];
-        for(let i = start; i >= 0; i--){
+        let datec = structuredClone(date);
+        //datec.setSeconds(datec.getSeconds() + 1);
+
+        for (let i = start; i >= 0; i--) {
             let ret = this.cells[i];
-            if(
-                // only allow 1h cells if not the whole day is needed
-                ret.start <= date && ret.duration < 24 && !wholeDay ||
-                ret.start <= date && ret.duration == 24 && wholeDay
-            ){
-                /*if(wholeDay){
-                    console.log(ret.start.toLocaleString("de") + " < " + date.toLocaleString("de"));
-                }*/
-                
-                return ret;
+            if(this.dayCount < 30){
+                if (
+                    // only allow 1h cells if not the whole day is needed
+                    ret.start <= date && ret.duration < 24 && !wholeDay ||
+                    ret.start <= date && ret.duration == 24 && wholeDay
+                ) {
+                    //console.log(ret.start.toLocaleString("de") + " <= " + date.toLocaleString("de"));
+                    return ret;
+                }
+            }else{
+                if(Common.sameDay(ret.start, date)){
+                    return ret;
+                }
             }
         }
         return ret;
     }
 
-    static addEvent(parent, appointment){
+    static addEvent(parent, appointment) {
         //console.table(calendar);
         //console.log(appointment.data);
         // Week or 3 day view
-        if(parent.dayCount < 30){
-/*          +--------------------------------------+
-            |                                      |
-            |    Creating DIVs for Appointments    |
-            |            in x-Day view             |
-            |                                      |
-            +--------------------------------------+    */
-            let cell = parent.getCell(appointment.dtstart);
+        //if(parent.dayCount < 30){
+        /*          +--------------------------------------+
+                    |                                      |
+                    |    Creating DIVs for Appointments    |
+                    |            in x-Day view             |
+                    |                                      |
+                    +--------------------------------------+    */
+        let cell = parent.getCell(appointment.dtstart);
 
-            let current = structuredClone(appointment.dtstart);
-            current = Common.timeSet0(current);
-            let wholeDay = appointment.wholeDay();
-            console.log(appointment.summary + ": " + (Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)));
+        let current = structuredClone(appointment.dtstart);
+        current = Common.timeSet0(current);
+        let wholeDay = appointment.wholeDay();
+        console.log("Adding " + appointment.summary);
 
-            // Step forward a day each time, until the end day is reached.
-            while(Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)){
-                let start = Common.sameDay(appointment.dtstart, current) ? appointment.dtstart : Common.timeSet0(current);
-                let end = appointment.dtend;
-                if(!Common.sameDay(current, end)){
-                    end = structuredClone(current);
-                    end.setHours(23,59,59);
-                }
-                
-                let deltah = (end.getTime() - start.getTime())/Common.MS_HOUR;
-                deltah = Common.round(deltah, 2);
-                //console.log(appointment.summary + " part has " + deltah + " hours");
-                if(
-                    deltah <= 0 ||
-                    current >= Common.addDays(parent.start, parent.dayCount)
-                ){
-                    // remove unnessesary stub
-                    break;
-                }
+        // Step forward a day each time, until the end day is reached.
+        while (Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)) {
+            let firstDay = Common.sameDay(appointment.dtstart, current);
+            let start = firstDay ? appointment.dtstart : Common.timeSet0(current);
+            let end = appointment.dtend;
+            let lastDay = Common.sameDay(current, end);
+            if (!lastDay){
+                end = structuredClone(current);
+                end.setHours(23, 59, 59);
+            }
 
-                let div = document.createElement("div")
-                div.classList.add("appointment");
-                div.classList.add("shine");
-                // content
+            let deltah = (end.getTime() - start.getTime()) / Common.MS_HOUR;
+            deltah = Common.round(deltah, 2);
+            //console.log(appointment.summary + " part has " + deltah + " hours");
+            if (
+                deltah <= 0 ||
+                current >= Common.addDays(parent.start, parent.dayCount)
+            ) {
+                // remove unnessesary stub
+                break;
+            }
+
+            let div = document.createElement("div")
+            div.classList.add("appointment");
+            div.classList.add("shine");
+            // content
+            if (parent.dayCount < 30) {
                 let b = document.createElement("b");
-                b.innerHTML = appointment.summary;
                 div.appendChild(b);
-
+                b.innerHTML = appointment.summary;
                 let p = document.createElement("p");
                 p.innerHTML += "von: " + appointment.dtstart.toLocaleString("de");
                 p.innerHTML += "<br>bis: " + appointment.dtend.toLocaleString("de");
                 div.appendChild(p);
-                if(!wholeDay){
+                if (!wholeDay) {
                     // make appointment style open in case it goes over date line
-                    if(!Common.sameDay(appointment.dtstart, current)){
+                    if (!Common.sameDay(appointment.dtstart, current)) {
                         div.classList.add("opentop");
                     }
-                    if(!Common.sameDay(appointment.dtend, current)){
+                    if (!Common.sameDay(appointment.dtend, current)) {
                         div.classList.add("openbottom");
                     }
-                    div.style.height = "calc(" + (100*deltah) + "% +  var(--appointment-radius))";
+                    div.style.height = "calc(" + (100 * deltah) + "% +  var(--appointment-radius))";
                 }
-
-                div.style.backgroundColor = appointment.calendar.color;
-                appointment.dom.push(div);
 
                 let startcell = parent.getCell(start, wholeDay);
                 // Get the diff of start and cell in hours
-                let deltastart = (start.getTime() - startcell.start.getTime())/Common.MS_HOUR;
+                let deltastart = (start.getTime() - startcell.start.getTime()) / Common.MS_HOUR;
                 div.style.top = Math.round(100 * deltastart) + "%";
- 
-                startcell.dom.appendChild(div);
 
-                current = Common.addDays(current, 1);
+                startcell.dom.appendChild(div);
+            }else{
+                if(!wholeDay){
+                    let b = document.createElement("b");
+                    // Arrows
+                    if(firstDay && !lastDay){
+                        b.innerHTML += "&#x21A6;";
+                    }else if(!firstDay && lastDay){
+                        b.innerHTML += "&#x21E5;";
+                    }else if(!firstDay && !lastDay){
+                        b.innerHTML += "&#x27F7;";
+                    }
+
+                    if(firstDay){
+                        b.innerHTML += start.toLocaleString("default", {
+                            hour: "numeric",
+                            minute: "2-digit"
+                        });
+                    }else if(lastDay){
+                        b.innerHTML += appointment.dtend.toLocaleString("default", {
+                            hour: "numeric",
+                            minute: "2-digit"
+                        });
+                    }
+                    div.appendChild(b);
+                }
+
+                div.innerHTML += " " + appointment.summary;
+
+                let cell = parent.getCell(start, wholeDay);
+                cell.dom.appendChild(div);
             }
+            div.style.backgroundColor = appointment.calendar.color;
+            appointment.dom.push(div);
+            current = Common.addDays(current, 1);
         }
     }
 
-    clear(){
+    clear() {
         this.thead.innerHTML = "";
         this.tbody.innerHTML = "";
     }
 
-    get dom(){
+    get dom() {
         return this.table;
     }
 
@@ -261,10 +306,10 @@ class CalendarTable{
         @param [day] Starting day.
         @return in case of 3 days, the first. In case of 7 the first of the week
     */
-    getStartDate(date){
+    getStartDate(date) {
         const MONDAY = 1;
         //console.log(this.dayCount);
-        switch(this.dayCount){
+        switch (this.dayCount) {
             case 7: {
                 let diff = MONDAY - date.getDay();
                 // add/substract a day in ms
@@ -277,10 +322,10 @@ class CalendarTable{
                 date = new Date(y, m, 1);
 
                 let limit = 16;
-                while(date.getDay() != MONDAY && limit--){
+                while (date.getDay() != MONDAY && limit--) {
                     date.setTime(date.getTime() - Common.MS_DAY);
                 }
-            }break;
+            } break;
             default: break;
         }
         date = Common.timeSet0(date);
@@ -288,33 +333,43 @@ class CalendarTable{
     }
 
     // returns [startdate, enddate]
-    getDateInterval(){
+    getDateInterval() {
         this.start = Common.timeSet0(this.start);
         let ret = [this.start, new Date(this.start.getTime() + Common.MS_DAY * this.dayCount)];
         // month
-        if(this.dayCount == 30){
+        if (this.dayCount == 30) {
             let diff = CalendarTable.WEEK_COUNT_MONTH_VIEW * 7 * Common.MS_DAY;
             ret[1] = new Date(this.start.getTime() + diff);
         }
         return ret;
     }
+
+    monthWidgetShow(month) {
+        let h3 = CalendarTable.monthWidget.querySelector("h3") ?? CalendarTable.monthWidget;
+        h3.innerHTML = month;
+        CalendarTable.monthWidget.style.display = "unset";
+    }
+
+    monthWidgetHide() {
+        CalendarTable.monthWidget.style.display = "none";
+    }
 }
 
-class View{
+class View {
     static PARENT = document.getElementById("calendarspace") ?? document.body;
     static xDown = null;
     static yDown = null;
     static DAYS_DEFAULT = 3;
-    constructor(days = View.DAYS_DEFAULT, calendars = []){
+    constructor(days = View.DAYS_DEFAULT, calendars = []) {
         this.start = new Date();
         this.end = new Date();
-        
+
         this.dom = document.createElement("div");
         this.setCalendars(calendars);
         View.PARENT.appendChild(this.dom);
 
         this.table = new CalendarTable();
-        
+
         this.dom.append(this.table.dom);
         this.setDays(days);
 
@@ -324,8 +379,8 @@ class View{
     /*
         Set the number of days displayed. e.g 1 day, 3 days or 7 for the week. Start will be picked automatically
     */
-    setDays(days, start){
-        if(start){
+    setDays(days, start) {
+        if (start) {
             this.start = start;
         }
         this.days = days;
@@ -338,15 +393,15 @@ class View{
     /*
         Set calendars
     */
-    setCalendars(calendars){
+    setCalendars(calendars) {
         this.calendars = calendars;
     }
     /*
         Use this function to specify the name of the raido inputs, that will be used to set the range
     */
-    setRangeRadioName(name){
+    setRangeRadioName(name) {
         let inps = document.querySelectorAll('input[name="' + name + '"]');
-        for(let i = 0; i < inps.length; i++){
+        for (let i = 0; i < inps.length; i++) {
             inps[i].addEventListener("click", (evt) => {
                 // on value change, set the day-count
                 this.setDays(evt.target.value ?? View.DAYS_DEFAULT);
@@ -354,57 +409,62 @@ class View{
         }
     }
 
-    addPage(j){
-        console.log("Adding " + j + " pages");
-        if(j < 0){
+    addPage(j) {
+        //console.log("Adding " + j + " pages");
+        if (j < 0) {
             let di = this.table.getDateInterval();
             let diff = di[1].getTime() - di[0].getTime();
-            let start = new Date(di[0].getTime() - diff);
-            this.setDays(this.days, start);
-        }else if(j > 0){
+            if (this.days < 30) {
+                let start = new Date(di[0].getTime() - diff);
+                this.setDays(this.days, start);
+            } else {
+                // Add days to be within the safe rage in month view
+                this.setDays(this.days, Common.addDays(di[0], -1));
+            }
+        } else if (j > 0) {
             let di = this.table.getDateInterval();
             this.setDays(this.days, di[1]);
         }
     }
 
-    prev(){
+    prev() {
         this.addPage(-1);
     }
 
-    next(){
+    next() {
         this.addPage(1);
     }
 
-    today(){
+    today() {
         this.setDays(this.days, new Date());
     }
 
     static getTouches(evt) {
         return evt.touches ||      // browser API
-        evt.originalEvent.touches; // jQuery
-    }   
+            evt.originalEvent.touches; // jQuery
+    }
 
-    static touchStart(evt){
-        const firstTouch = View.getTouches(evt)[0];                                      
-        View.xDown = firstTouch.clientX;                                      
+    static touchStart(evt) {
+        const firstTouch = View.getTouches(evt)[0];
+        View.xDown = firstTouch.clientX;
         View.yDown = firstTouch.clientY;
         //console.log(View.xDown + " - " + View.yDown);
     }
 
-    static touchMove(evt){
-        if ( ! View.xDown || ! View.yDown ) {
+    static touchMove(evt) {
+        if (!View.xDown || !View.yDown) {
             return;
         }
-    
-        var xUp = evt.touches[0].clientX;                                    
+
+        var xUp = evt.touches[0].clientX;
         var yUp = evt.touches[0].clientY;
-    
+
         var xDiff = View.xDown - xUp;
         var yDiff = View.yDown - yUp;
-                                                      
+
         /*most significant*/
-        if ( Math.abs( xDiff ) > Math.abs( yDiff ) ) {
-            if ( xDiff > 0 ) {
+        if (Math.abs(xDiff) > Math.abs(yDiff)) {
+            if (xDiff > 0) {
                 /* right swipe */
                 console.log("Swipe Right to Left!");
                 View.PARENT.innerHTML += "Swipe Right to Left!<br>";
@@ -412,19 +472,19 @@ class View{
                 /* left swipe */
                 console.log("Swipe Left!");
                 View.PARENT.innerHTML += "Swipe Left to Right!<br>";
-            }                       
+            }
         } else {
-            if ( yDiff > 0 ) {
-                /* down swipe */ 
+            if (yDiff > 0) {
+                /* down swipe */
                 console.log("Swipe Down to Up!");
-            } else { 
+            } else {
                 /* up swipe */
                 console.log("Swipe Up to Down!");
-            }                                                                 
+            }
         }
         /* reset values */
         View.xDown = null;
-        View.yDown = null; 
+        View.yDown = null;
     }
 }
 document.addEventListener('touchstart', View.touchStart, false);

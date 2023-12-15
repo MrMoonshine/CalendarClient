@@ -146,6 +146,9 @@ function eventInfo($evt){
                         <button type="button" class="btn shine" id="today">&#x1F4C5; Today</button>
                         <button type="button" class="btn shine" id="next">&#x27A1;</button>
                     </div>
+                    <div id="month-widget">
+                        <h3></h3>
+                    </div>
                 </div>
                 <div id="calendarspace">
 <?php
