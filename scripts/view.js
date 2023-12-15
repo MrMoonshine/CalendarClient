@@ -24,9 +24,44 @@ class CalendarTableCell {
     }
 }
 
+class CalendarTableEventPart{
+    constructor(dom, wholeDay, start, end){
+        this.dom = dom;
+        this.start = start;
+        this.end = end;
+        this.wholeDay = wholeDay;
+        this.track = 0;
+    }
+
+    setTrack(track){
+        this.track = track;
+    }
+
+    static overlap(a, b, trackIgnore = false){
+        if(!trackIgnore && a.track != b.track){
+            return false;
+        }
+
+        if(a.wholeDay || b.wholeDay || b == a){
+            return false;
+        }
+        return (b.start >= a.start && b.start <= a.end ||
+            b.end >= a.start && b.end <= a.end);
+    }
+
+    static overlapCount(m, list, trackIgnore = false){
+        let counter = 0;
+        list.forEach(elem => {
+            counter += CalendarTableEventPart.overlap(m, elem, trackIgnore) ? 1 : 0;
+        });
+        return counter;
+    }
+}
+
 class CalendarTable {
     table;
     static WEEK_COUNT_MONTH_VIEW = 6;
+    static DAV_VIEW_MAX_TRACKS = 5;
     static monthWidget = document.getElementById("month-widget");
 
     constructor(days, start = null) {
@@ -40,6 +75,10 @@ class CalendarTable {
         this.table.appendChild(this.thead);
         this.table.appendChild(this.tbody);
         this.setDays(this.dayCount);
+
+        this.evtParts = [];
+        this.calendarCount = 0;
+        this.counter = 0;
     }
 
     setDays(days, start = null) {
@@ -47,6 +86,8 @@ class CalendarTable {
             this.start = start;
         }
         this.cells = [];
+        this.evtParts = [];
+        this.counter = 0;
         this.dayCount = parseInt(days);
         this.clear();
         let trh = document.createElement("tr");
@@ -56,6 +97,7 @@ class CalendarTable {
         // Check if there should be a month table made
         if (this.dayCount < 30) {
             this.monthWidgetHide();
+            this.start = this.getStartDate(this.start ?? new Date());
             // include an empty one for the clock on the left side
             trh.appendChild(document.createElement("th"));
             for (let i = 0; i < this.dayCount; i++) {
@@ -187,14 +229,9 @@ class CalendarTable {
     }
 
     static addEvent(parent, appointment) {
-        //console.table(calendar);
-        //console.log(appointment.data);
-        // Week or 3 day view
-        //if(parent.dayCount < 30){
         /*          +--------------------------------------+
                     |                                      |
                     |    Creating DIVs for Appointments    |
-                    |            in x-Day view             |
                     |                                      |
                     +--------------------------------------+    */
         let cell = parent.getCell(appointment.dtstart);
@@ -229,6 +266,8 @@ class CalendarTable {
             let div = document.createElement("div")
             div.classList.add("appointment");
             div.classList.add("shine");
+            let eventPart = new CalendarTableEventPart(div, wholeDay, start, end);
+
             // content
             if (parent.dayCount < 30) {
                 let b = document.createElement("b");
@@ -247,15 +286,22 @@ class CalendarTable {
                         div.classList.add("openbottom");
                     }
                     div.style.height = "calc(" + (100 * deltah) + "% +  var(--appointment-radius))";
+
+                    // Overlap handling
+                    while(CalendarTableEventPart.overlapCount(eventPart, parent.evtParts) && eventPart.track < CalendarTable.DAV_VIEW_MAX_TRACKS){
+                        console.log(appointment.summary + " overlaps");
+                        eventPart.setTrack(eventPart.track + 1);
+                    }
+                    parent.evtParts.push(eventPart);
                 }
 
                 let startcell = parent.getCell(start, wholeDay);
                 // Get the diff of start and cell in hours
                 let deltastart = (start.getTime() - startcell.start.getTime()) / Common.MS_HOUR;
                 div.style.top = Math.round(100 * deltastart) + "%";
-
                 startcell.dom.appendChild(div);
             }else{
+                // Month View
                 if(!wholeDay){
                     let b = document.createElement("b");
                     // Arrows
@@ -286,10 +332,27 @@ class CalendarTable {
                 let cell = parent.getCell(start, wholeDay);
                 cell.dom.appendChild(div);
             }
+
             div.style.backgroundColor = appointment.calendar.color;
             appointment.dom.push(div);
             current = Common.addDays(current, 1);
         }
+    }
+
+    static arrangeTracks(parent){
+        console.log("A Request has finished");
+        parent.counter++;
+        if(parent.calendarCount > parent.counter){
+            return;
+        }
+
+        console.log("Arranging elements...");
+        parent.evtParts.forEach(p => {
+            let olc = CalendarTableEventPart.overlapCount(p, parent.evtParts, true);
+            //console.log(p.dom.innerHTML + " has " + olc);
+            p.dom.style.width = "calc((100% - var(--appointment-radius))/" + (olc + 1) + ")";
+            p.dom.style.left = "calc(100% * " + (p.track)/(olc + 1) + ")";
+        });
     }
 
     clear() {
@@ -384,10 +447,11 @@ class View {
             this.start = start;
         }
         this.days = days;
+        this.table.calendarCount = this.calendars.length;
         this.table.setDays(this.days, this.start);
         let bounds = this.table.getDateInterval();
         this.calendars.forEach(calendar => {
-            calendar.update(bounds, this.table, CalendarTable.addEvent);
+            calendar.update(bounds, this.table, CalendarTable.addEvent, CalendarTable.arrangeTracks);
         });
     }
     /*

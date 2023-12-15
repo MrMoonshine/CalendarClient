@@ -203,7 +203,7 @@ class Calendar{
         @param bounds [Date, Date] interval for calendar search
         @param callback(Appointment appointment) function used to populate a calendar table by providing raw data of an appointment
     */
-    update(bounds, parent, callback){
+    update(bounds, parent, callback, onfinish){
         //console.log(Calendar.date2iCal(bounds[0]));
         //console.log(Calendar.date2iCal(bounds[1]));
         this.spinner.style.display = "unset";
@@ -234,6 +234,10 @@ class Calendar{
                 callback(parent, new Appointment(this, elem));
             });
             this.spinner.style.display = "none";
+        });
+
+        req.addEventListener("loadend", () => {
+            onfinish(parent);
         });
 
         req.open("GET", this.api);
