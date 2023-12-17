@@ -44,6 +44,23 @@ function handle_auth(){
     }
 }
 
+function getGroupCalendars($group){
+    $retval = [];
+    $client = new SimpleCalDAVClient();
+    try{
+        // Session must be opened with user in URL, otherwise, the first user is selected
+        $client->connect(
+            CONFIG["caldav"].$group,
+            $_SESSION["user"],
+            $_SESSION["passwd"]
+        );
+        $retval = $client->findCalendars();
+    }catch (Exception $e) {
+
+    }
+    return $retval;
+}
+
 function calendarInfo($calendar){
     $name = $calendar->getDisplayName();
     $url = $calendar->getURL();
@@ -183,6 +200,10 @@ try{
     ];
     // Start searching
     $calendars = $client->findCalendars();
+
+    if(isset(CONFIG["group"])){
+        $calendars = array_merge($calendars, getGroupCalendars(CONFIG["group"]));
+    }
 
     $testcal = new CalDAVCalendar("/davical/caldav.php/david/schichtplan/", "Test 1");
     $testcal->setRBGcolor("#f5761b");

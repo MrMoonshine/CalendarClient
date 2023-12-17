@@ -22,6 +22,21 @@ class Common{
         return new Date(date.getTime() + days * Common.MS_DAY);
     }
 
+    static addMonth(date, months){
+        let datec = structuredClone(date);
+        let m = datec.getMonth();
+        let msum = m + months;
+        datec.setMonth(msum % 12);
+        datec = Common.addYear(datec, Math.floor(msum/12));
+        return datec;
+    }
+
+    static addYear(date, years){
+        let datec = structuredClone(date);
+        datec.setFullYear(datec.getFullYear() + years);
+        return datec;
+    }
+
     static timeSet0(date_i){
         let date = structuredClone(date_i);
         date.setHours(0);
@@ -53,9 +68,17 @@ class Appointment{
         var jcalData = ICAL.parse(this.data);
         var vcalendar = new ICAL.Component(jcalData);
         var vevent = vcalendar.getFirstSubcomponent('vevent');
+        //console.log(vevent);
     
         this.summary = vevent.getFirstPropertyValue('summary');
         this.description = vevent.getFirstPropertyValue('description');
+        this.rrule = vevent.getFirstPropertyValue('rrule');
+    
+        /*if(this.rrule){
+            console.log(this.data);
+            console.log(vevent);
+            console.log(this.rrule);
+        }*/
         // Get Times
         this.dtstart = Appointment.getDateFromProperty(
             vevent.getFirstProperty('dtstart')
@@ -68,27 +91,28 @@ class Appointment{
         );
         // Validate calendar
         this.valid = this.dtstart && this.dtend;
+        
         this.error_message = "";
         if(this.valid){
             this.valid &&= this.dtstart < this.dtend;
             this.error_message = "End before Start";
         }else{
+            // correction to whole-day if at least DTSTART is set
+            if(this.dtstart){
+                this.dtstart = Common.timeSet0(this.dtstart);
+                this.dtend = Common.addDays(this.dtstart, 1);
+                this.valid = true;
+                //console.log("Corrected to " + this.dtstart);
+            }
             this.error_message = "DTSTART or DTEND is absent!"; 
         }
+        //console.log("Appointment is valid: " + this.valid);
+        this.dtstartOriginal = structuredClone(this.dtstart);
+        this.dtendOriginal = structuredClone(this.dtend);
+        this.counter = 0;       // Count of drawn iterations
+        this.enable = true;     // Should this iteration be drawn?
     }
 
-    /*
-        @brief builds calendar entries
-        @param start CalendarTableCell start cell
-        @param end CalendarTableCell end cell
-    */
-    /*buildDom(start, end){
-        const MS_HOURS = 60 * 60 * 1000;
-        let tsdiff = (this.dtstart.getTime() - start.start.getTime()) / MS_HOURS;
-        let tediff = (this.dtstart.getTime() - end.start.getTime()) / MS_HOURS;
-
-        let div = document.createElement("div");
-    }*/
     durationH(){
         return (this.dtend.getTime() - this.dtstart.getTime())/Common.MS_HOUR;
     }
@@ -118,6 +142,78 @@ class Appointment{
         return this.dom;
     }
 
+    /*
+        @brief calculates dtstart and dtend for the next occurance if it is a repeating event.
+        @returns true if there is a next one, false if there is not
+    */
+    calculateNext(){
+        if(!this.rrule){
+            return false;
+        }
+        // an rrule has been set
+        if(!this.rrule.freq){
+            return false;
+        }
+
+        if(this.rrule.counter){
+            if(this.rrule.counter <= this.counter){
+                return false;
+            }
+        }
+
+        let interval = this.rrule.interval ?? 1;
+
+        switch(this.rrule.freq){
+            case "DAILY":
+                this.dtstart = Common.addDays(this.dtstart, interval);
+                this.dtend = Common.addDays(this.dtend, interval);
+                break;
+            case "WEEKLY":
+                this.dtstart = Common.addDays(this.dtstart, 7*interval);
+                this.dtend = Common.addDays(this.dtend, 7*interval);
+                break;
+            case "MONTHLY":
+                this.dtstart = Common.addMonth(this.dtstart, interval);
+                this.dtend = Common.addMonth(this.dtend, interval);
+                break;
+            case "YEARLY":
+                this.dtstart = Common.addYear(this.dtstart, interval);
+                this.dtend = Common.addYear(this.dtend, interval);
+                break;
+            default:
+                return false;
+                break;
+        }
+
+        if(this.rrule.until){
+            //console.log(this.rrule.until.toJSDate());
+            if(this.dtstart > this.rrule.until.toJSDate()){
+                return false;
+            }
+        }
+        this.enable = true;
+
+        if(this.rrule.parts){
+            if(this.rrule.parts.BYDAY){
+                //console.log(this.data);
+                let matches = 0;
+                const weekdays = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+                //console.log("Start day is " + this.dtstart.getDay() + " - " + this.dtstart.toLocaleString("default", {weekday: "long"}) + " ||| " + this.dtstart.toLocaleString());
+                //console.log(this.rrule.parts.BYDAY);
+                this.rrule.parts.BYDAY.forEach(element => {
+                    if(weekdays[this.dtstart.getDay() % 7] == element){
+                        matches++;
+                    }
+                });
+                if(matches < 1){
+                    this.enable = false;
+                }
+            }
+        }
+        this.counter++;
+        return true;
+    }
+
     // Returns UTC offset in milliseconds
     // If no name, calculate UTC-diff to local timezone
     static getTimezoneOffset(name = null){
@@ -132,6 +228,9 @@ class Appointment{
     }
 
     static getDateFromProperty(prop){
+        if(!prop){
+            return null;
+        }
         let jCal = prop.jCal;
         if(!jCal){
             return null;

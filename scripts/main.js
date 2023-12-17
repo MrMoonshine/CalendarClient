@@ -13,6 +13,10 @@ function toggleSideNav(){
 let userclaendars = Calendar.fromList(CALENDARLIST);
 let userview = new View(3, userclaendars);
 userview.setRangeRadioName("view");
+document.addEventListener('touchstart', View.touchStart, false);
+document.addEventListener('touchmove', (evt) => {
+    userview.touchMove(evt);
+}, false);
 
 const CSS_BASE_NAVIGATOR = "#navigator ";
 let navigatorPrev = document.querySelector(CSS_BASE_NAVIGATOR + "#prev");
@@ -25,7 +29,6 @@ if(navigatorPrev){
 let navigatorNext = document.querySelector(CSS_BASE_NAVIGATOR + "#next");
 if(navigatorNext){
     navigatorNext.addEventListener("click", () => {
-        console.log("NEXT");
         userview.next();
     });
 }

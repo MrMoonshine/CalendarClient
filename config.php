@@ -6,7 +6,9 @@ define(
         |        Server                    |
         +---------------------------------*/
         // URL to caldav script
-        "caldav" => "http://alpaka3d/davical/caldav.php/",      
+        "caldav" => "http://alpaka3d/davical/caldav.php/",
+        // Group to do a second calendar search
+        "group" => "DaviCal",
         // SSL cert validation enable/disable
         "validate_cert" => false,
         /*
