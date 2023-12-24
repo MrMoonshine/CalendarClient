@@ -269,7 +269,9 @@ class Calendar{
 
     static PARENT = document.getElementById("calendarselection") ?? document.body;
     
-    constructor(url, name, user="", passwd="", color = "", hidden = false){
+    dialog;
+
+    constructor(url, name, color = "", hidden = false, user="", passwd=""){
         this.url = url;
         this.name = name;
         this.user = user;
@@ -278,6 +280,7 @@ class Calendar{
         this.color = color;
         
         this.id = Calendar.COUNTER++;
+        this.buildDialog();
         this.buildDOM();
 
         // API URL build
@@ -354,6 +357,11 @@ class Calendar{
         this.titledisplay.classList.add("title");
         this.titledisplay.innerHTML = this.name;
 
+        this.titledisplay.style.cursor = "pointer";
+        this.titledisplay.addEventListener("click", () => {
+            this.dialog.showModal();
+        });
+
         this.colordisplay = document.createElement("span");
         this.colordisplay.classList.add("colordisplay");
         this.setColor(this.color);
@@ -362,9 +370,38 @@ class Calendar{
         this.spinner.classList.add("spinner");
         this.spinner.style.display = "none";
 
+        /* Hidden or not checkbox */
+        let cbid = "cal-hide-cb-" + this.id;
+        let label = document.createElement("label");
+        label.classList.add("check-container");
+        label.setAttribute("for", cbid);
+        this.cb = document.createElement("input");
+        this.cb.setAttribute("type", "checkbox");
+        this.cb.id = cbid;
+        let cm = document.createElement("span");
+        cm.classList.add("checkmark");
+        if(!this.hidden){
+            this.cb.setAttribute("checked", true);
+        }
+        this.cb.addEventListener("change", () => {
+            this.hidden = !this.hidden;
+            let appoi = document.querySelectorAll(".appointment.calendar" + this.id);
+            appoi.forEach(a => {
+                if(this.hidden){
+                    a.classList.add("hidden");
+                }else{
+                    a.classList.remove("hidden");
+                }
+            });
+        });
+
+        label.appendChild(this.cb);
+        label.appendChild(cm);
+
         container.appendChild(this.titledisplay);
         container.appendChild(this.spinner);
         container.appendChild(this.colordisplay);
+        container.appendChild(label);
 
         this.errordisplay = document.createElement("code");
         this.errordisplay.classList.add("errordisplay");
@@ -372,6 +409,67 @@ class Calendar{
 
         Calendar.PARENT.appendChild(container);
         Calendar.PARENT.appendChild(this.errordisplay);
+    }
+
+    buildDialog(){
+        this.dialog = document.createElement("dialog");
+
+        let h = document.createElement("h3");
+        h.innerHTML = "Edit calendar <i>" + this.name + "</i>";
+        this.dialog.appendChild(h);
+
+        let form = document.createElement("form");
+        form.setAttribute("method", "POST");
+
+        let closer = document.createElement("button");
+        closer.setAttribute("type", "button");
+        closer.classList.add("close");
+        closer.innerHTML = '<span aria-hidden="true">&times;</span>';
+        closer.addEventListener("click", () => {
+            this.dialog.close();
+        });
+        this.dialog.appendChild(closer);
+        let label1 = document.createElement("label");
+        label1.innerHTML = "Display Name";
+        let idn = document.createElement("input");
+        idn.setAttribute("type", "text");
+        idn.name = "displayname";
+        idn.value = this.name;
+        form.appendChild(label1);
+        form.appendChild(idn);
+
+        let label2 = document.createElement("label");
+        label2.innerHTML = "Color";
+
+        let icolor = document.createElement("input");
+        icolor.setAttribute("type", "color");
+        icolor.name = "color";
+        icolor.value = this.color;
+
+        form.appendChild(label2);
+        form.appendChild(icolor);
+
+        let submit = document.createElement("input");
+        submit.setAttribute("type", "submit");
+
+        let bexit = document.createElement("button");
+        bexit.setAttribute("type", "button");
+        bexit.innerHTML = "Cancel";
+
+        let container = document.createElement("div");
+        container.classList.add("d-flex");
+        container.appendChild(submit);
+        container.appendChild(bexit);
+        form.appendChild(container);
+
+        let url = document.createElement("input");
+        url.classList.add("hidden");
+        url.value = this.url;
+        url.name = "url";
+        form.appendChild(url);
+
+        this.dialog.appendChild(form);
+        document.body.appendChild(this.dialog);
     }
 
     // Sets the error message. If no parameter is set, clear it
@@ -397,8 +495,7 @@ class Calendar{
         }
 
         (clist.calendars ?? []).forEach(cal => {
-            let obj = new Calendar(cal.URL, cal.name);
-            obj.setColor(cal.color);
+            let obj = new Calendar(cal.URL, cal.name, cal.color);
             ret.push(obj);
         });
         return ret;

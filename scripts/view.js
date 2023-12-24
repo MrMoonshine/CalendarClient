@@ -25,12 +25,13 @@ class CalendarTableCell {
 }
 
 class CalendarTableEventPart {
-    constructor(dom, wholeDay, start, end) {
+    constructor(dom, wholeDay, start, end, appointment) {
         this.dom = dom;
         this.start = start;
         this.end = end;
         this.wholeDay = wholeDay;
         this.track = 0;
+        this.appointment = appointment;
     }
 
     setTrack(track) {
@@ -38,6 +39,10 @@ class CalendarTableEventPart {
     }
 
     static overlap(a, b, trackIgnore = false) {
+        if(a.appointment.hidden || a.appointment.hidden){
+            return false;
+        }
+
         if (!trackIgnore && a.track != b.track) {
             return false;
         }
@@ -99,7 +104,9 @@ class CalendarTable {
             this.monthWidgetHide();
             this.start = this.getStartDate(this.start ?? new Date());
             // include an empty one for the clock on the left side
-            trh.appendChild(document.createElement("th"));
+            let thcorner = document.createElement("th");
+            thcorner.classList.add("time");
+            trh.appendChild(thcorner);
             for (let i = 0; i < this.dayCount; i++) {
                 let th = document.createElement("th");
                 let date = new Date(this.start.getTime() + Common.MS_DAY * i);
@@ -114,7 +121,9 @@ class CalendarTable {
             // For whole-day appoinments
             let trwd = document.createElement("tr");
             trwd.classList.add("whole-days");
-            trwd.appendChild(document.createElement("td")); // Empty element for time col
+            let thwdfirst = document.createElement("th");
+            thwdfirst.classList.add("time");
+            trwd.appendChild(thwdfirst); // Empty element for time col
             for (let i = 0; i < this.dayCount; i++) {
                 let cell = new CalendarTableCell(
                     Common.addDays(date, i),
@@ -246,6 +255,11 @@ class CalendarTable {
             console.error("Invalid appointment " + (appointment.summary ?? " ERROR ") + appointment.error_message);
             return;
         }
+        // Exit if the calendar is hidden
+        if(appointment.calendar.hidden){
+            return;
+        }
+
         do {
             if(!appointment.enable){
                 continue;
@@ -282,7 +296,7 @@ class CalendarTable {
                 let div = document.createElement("div")
                 div.classList.add("appointment");
                 div.classList.add("shine");
-                let eventPart = new CalendarTableEventPart(div, wholeDay, start, end);
+                let eventPart = new CalendarTableEventPart(div, wholeDay, start, end, appointment);
 
                 // content
                 if (parent.dayCount < 30) {
@@ -365,11 +379,13 @@ class CalendarTable {
         //console.log("Day count is " + parent.dayCount);
     }
 
-    static arrangeTracks(parent) {
-        console.log("A Request has finished");
-        parent.counter++;
-        if (parent.calendarCount > parent.counter) {
-            return;
+    static arrangeTracks(parent, ignoreCounter = false) {
+        if(!ignoreCounter){
+            console.log("A Request has finished");
+            parent.counter++;
+            if (parent.calendarCount > parent.counter) {
+                return;
+            }
         }
 
         console.log("Arranging elements...");

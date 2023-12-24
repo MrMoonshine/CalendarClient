@@ -205,9 +205,22 @@ try{
         $calendars = array_merge($calendars, getGroupCalendars(CONFIG["group"]));
     }
 
-    $testcal = new CalDAVCalendar("/davical/caldav.php/david/schichtplan/", "Test 1");
-    $testcal->setRBGcolor("#f5761b");
-    array_push($calendars, $testcal);
+    if(isset($_POST["url"])){
+        //var_dump($calendars);
+        foreach ($calendars as $calendar){
+            if($calendar->getURL() != $_POST["url"]){
+                continue;
+            }
+            calendarInfo($calendar);
+            $colorpattern = "/^#[0-9A-Z]{6}$/i";
+            //$matches = 
+            if(preg_match($colorpattern, $_POST["color"])){
+                echo("<p>Set color to ".$_POST["color"]."</p>");
+                $calendar->setRBGcolor($_POST["color"]);
+            }
+        }
+        unset($calendar);
+    }
 
     foreach ($calendars as $calendar) {
         try{

@@ -13,6 +13,13 @@ function toggleSideNav(){
 let userclaendars = Calendar.fromList(CALENDARLIST);
 let userview = new View(3, userclaendars);
 userview.setRangeRadioName("view");
+
+userclaendars.forEach(cal => {
+    cal.cb.addEventListener("change", () => {
+        CalendarTable.arrangeTracks(userview.table, true);
+    });
+});
+
 document.addEventListener('touchstart', View.touchStart, false);
 document.addEventListener('touchmove', (evt) => {
     userview.touchMove(evt);

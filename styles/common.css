@@ -51,6 +51,10 @@ body{
     background-image: linear-gradient(transparent, var(--color-shine), transparent);
 }
 
+.hidden{
+    display: none !important;
+}
+
 .d-flex{
     display: flex;
     flex-wrap: nowrap;

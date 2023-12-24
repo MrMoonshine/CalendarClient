@@ -1,5 +1,5 @@
 :root{
-    --appointment-radius: 8px
+    --appointment-radius: 5px;
 }
 
 .view-appointment-day{
@@ -24,6 +24,7 @@
 
 table{
     border-collapse: collapse;
+    table-layout: fixed;
     width: calc(100vw - 16em - 16px);
 }
 
@@ -140,5 +141,13 @@ table.month td .appointment:first-of-type{
 @media only screen and (max-width: 500px){
     table{
         width: calc(100vw - 16px);
+    }
+
+    :root{
+        --appointment-radius: 2px;
+    }
+
+    .appointment{
+        font-size: 10px;
     }
 }
