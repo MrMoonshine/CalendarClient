@@ -35,7 +35,12 @@ define(
         /*---------------------------------+
         |        Cosmetics                 |
         +---------------------------------*/
-        "color_default" => "#008080",
+        "color_default" => [
+            "#D65076",
+            "#008080",
+            "#EFC050",
+            "#88B04B"
+        ],
         "background" => "",                                     // Background image for login Form                                          
     )
 );

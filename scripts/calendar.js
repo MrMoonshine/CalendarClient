@@ -4,6 +4,24 @@ class Common{
     static MS_HOUR = Common.MS_MIN * 60;
     static MS_DAY = Common.MS_HOUR * 24;
 
+    static SUNDAY = 0;
+    static MONDAY = 1;
+    static TUESDAY = 2;
+    static WEDNESDAY = 3;
+    static THURSDAY = 4;
+    static FRIDAY = 5;
+    static SATURDAY = 6;
+
+    static calendars = [];
+
+    static hide(dom){
+        dom.classList.add("hidden");
+    }
+
+    static show(dom){
+        dom.classList.remove("hidden");
+    }
+
     static number2strpad(num, len){
         num = num.toString();
         num = num.padStart(len, "0");

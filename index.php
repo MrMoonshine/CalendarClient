@@ -221,14 +221,14 @@ try{
         }
         unset($calendar);
     }
-
+    $colorCounter = 0;
     foreach ($calendars as $calendar) {
         try{
             //calendarInfo($calendar);
             // Set default color if none is set
             $color = $calendar->getRBGcolor();
             if(strlen($color) < 1){
-                $color = CONFIG["color_default"];
+                $color = CONFIG["color_default"][$colorCounter++ % count(CONFIG["color_default"])];
             }
             // Build object from calendar data
             array_push($output["calendars"], array(
