@@ -10,11 +10,10 @@ function toggleSideNav(){
     }
 }
 
-Common.calendars = Calendar.fromList(CALENDARLIST);
-let userview = new View(3);
+let userview = new View(Calendar.fromList(CALENDARLIST), 3);
 userview.setRangeRadioName("view");
 
-Common.calendars.forEach(cal => {
+userview.calendars.forEach(cal => {
     cal.cb.addEventListener("change", () => {
         CalendarTable.arrangeTracks(userview.table, true);
     });

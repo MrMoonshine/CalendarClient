@@ -126,7 +126,8 @@ class CalendarTable {
     return 7 * CalendarTable.WEEK_COUNT_MONTH_VIEW;
   }
 
-  static addEvent(parent, appointment) {
+  static addEvent(parent, appointment){
+    //console.log(parent);
     /*          +--------------------------------------+
                     |                                      |
                     |    Creating DIVs for Appointments    |
@@ -211,13 +212,13 @@ class CalendarTable {
 
             // Overlap handling
             while (
-              CalendarTableEventPart.overlapCount(eventPart, parent.evtParts) &&
+              CalendarTableEventPart.overlapCount(eventPart, parent.events) &&
               eventPart.track < CalendarTable.DAV_VIEW_MAX_TRACKS
             ) {
               console.log(appointment.summary + " overlaps");
               eventPart.setTrack(eventPart.track + 1);
             }
-            parent.evtParts.push(eventPart);
+            parent.events.push(eventPart);
           }
 
           let startcell = parent.getCell(start, wholeDay);
@@ -289,8 +290,8 @@ class CalendarTable {
     }
 
     console.log("Arranging elements...");
-    parent.evtParts.forEach((p) => {
-      let olc = CalendarTableEventPart.overlapCount(p, parent.evtParts, true);
+    parent.events.forEach((p) => {
+      let olc = CalendarTableEventPart.overlapCount(p, parent.events, true);
       //console.log(p.dom.innerHTML + " has " + olc);
       p.dom.style.width =
         "calc((100% - var(--appointment-radius))/" + (olc + 1) + ")";
@@ -324,6 +325,19 @@ class CalendarTable {
     CalendarTable.monthWidget.style.display = "none";
   }
 
+  update(calendars){
+    let bounds = this.getDateInterval();
+    console.log(bounds);
+    calendars.forEach((calendar) => {
+      calendar.update(
+        bounds,
+        this,
+        CalendarTable.addEvent,
+        CalendarTable.arrangeTracks
+      );
+    });
+  }
+
   clear() {
     this.thead.innerHTML = "";
     this.tbody.innerHTML = "";
@@ -336,7 +350,7 @@ class CalendarTableDays extends CalendarTable {
     this.dayCount = days;
   }
 
-  setDays(days, start = null) {
+  setDays(calendars, days, start = null) {
     Common.show(this.dom);
     if (days > 0) {
       this.dayCount = parseInt(days);
@@ -346,13 +360,14 @@ class CalendarTableDays extends CalendarTable {
     }
 
     this.cells = [];
-    this.evtParts = [];
+    this.events = [];
 
     this.clear();
     this.monthWidgetHide();
 
     let trh = document.createElement("tr");
     this.thead.appendChild(trh);
+    
     this.start = this.getStartDate(this.start ?? new Date());
     // include an empty one for the clock on the left side
     let thcorner = document.createElement("th");
@@ -411,6 +426,7 @@ class CalendarTableDays extends CalendarTable {
         this.cells.forEach(elem => {
             console.log(elem.start.toLocaleString("de"));
         });*/
+    this.update(calendars);
   }
 
   getDateInterval() {
@@ -422,13 +438,30 @@ class CalendarTableDays extends CalendarTable {
   getStartDate(date) {
     date = Common.timeSet0(date);
     if (this.dayCount == 7) {
-      let diff = Common.MONDAY - date.getDay();
-      // add/substract a day in ms
-      let retval = Common.addDays(date, diff);
-      return retval;
+      // add/substract a day
+      let limit = 7;
+      while(date.getDay() != Common.MONDAY && limit--){
+        date = Common.addDays(date, -1);
+      }
+      return date;
     }
 
     return date;
+  }
+
+  addPage(calendars, j) {
+    //console.log("Adding " + j + " pages");
+    if (j < 0) {
+      let di = this.getDateInterval();
+      let diff = di[1].getTime() - di[0].getTime();
+      let start = new Date(di[0].getTime() - diff);
+      this.setDays(calendars, 0, start);
+    } else if (j > 0) {
+      let di = this.getDateInterval();
+      this.setDays(calendars, 0, di[1]);
+    }else{
+
+    }
   }
 }
 
@@ -440,7 +473,7 @@ class CalendarTableMonth extends CalendarTable {
     this.dom.classList.add("month");
   }
 
-  setMonth(start) {
+  setMonth(calendars, start = null) {
     Common.show(this.dom);
     this.clear();
     let trh = document.createElement("tr");
@@ -448,9 +481,10 @@ class CalendarTableMonth extends CalendarTable {
     /*
                 Month Table
             */
+    this.start = start;
     this.start = this.getStartDate(this.start ?? new Date());
     // jump at least a week ahead to be in the current month
-    let month_date = new Date(this.start.getTime() + Common.MS_DAY * 7);
+    let month_date = Common.addDays(this.start, 7);
     let month = month_date.getMonth();
     //console.log(this.start);
     // Display current month and year
@@ -491,6 +525,7 @@ class CalendarTableMonth extends CalendarTable {
       }
     }
     this.cells.sort(CalendarTableCell.compare);
+    this.update(calendars);
   }
 
   // returns [startdate, enddate]
@@ -498,13 +533,13 @@ class CalendarTableMonth extends CalendarTable {
     this.start = Common.timeSet0(this.start);
     let ret = [
       this.start,
-      new Date(this.start.getTime() + Common.MS_DAY * this.dayCount),
+      Common.addDays(this.start, this.dayCount),
     ];
     ret[1] = Common.addDays(this.start, CalendarTableMonth.WEEK_COUNT * 7);
     return ret;
   }
 
-  getStartDate(date) {
+  getStartDate(date){
     date = Common.timeSet0(date);
     // Substract until date is a monday
     let y = date.getFullYear();
@@ -517,6 +552,22 @@ class CalendarTableMonth extends CalendarTable {
     }
     return date;
   }
+
+  addPage(calendars, j) {
+    //console.log("Adding " + j + " pages");
+    if (j < 0) {
+      let di = this.getDateInterval();
+      console.log(di);
+      let diff = di[1].getTime() - di[0].getTime();
+      // Add days to be within the safe rage in month view
+      this.setMonth(calendars, Common.addDays(di[0], -1));
+    } else if (j > 0) {
+      let di = this.getDateInterval();
+      this.setMonth(calendars, di[1]);
+    }else{
+      this.setMonth(calendars);
+    }
+  }
 }
 
 class View {
@@ -524,9 +575,11 @@ class View {
   static xDown = null;
   static yDown = null;
   static DAYS_DEFAULT = 3;
-  constructor(days = View.DAYS_DEFAULT) {
+  constructor(calendars, days = View.DAYS_DEFAULT) {
     this.dom = document.createElement("div");
     View.PARENT.appendChild(this.dom);
+
+    this.calendars = calendars;
 
     this.tableDays = new CalendarTableDays(this.dom);
     this.tableMonth = new CalendarTableMonth(this.dom);
@@ -541,29 +594,19 @@ class View {
   get table() {
     return this.monthview ? this.tableMonth : this.tableDays;
   }
-
   /*
         Set the number of days displayed. e.g 1 day, 3 days or 7 for the week. Start will be picked automatically
     */
   setDays(days, start = null) {
     Common.hide(this.tableMonth.dom);
     this.monthview = false;
-    this.table.setDays(days, start ?? new Date());
-    let bounds = this.table.getDateInterval();
-    Common.calendars.forEach((calendar) => {
-      calendar.update(
-        bounds,
-        this.table,
-        CalendarTable.addEvent,
-        CalendarTable.arrangeTracks
-      );
-    });
+    this.table.setDays(this.calendars, days, start ?? new Date());
   }
 
   setMonth(date = null) {
     Common.hide(this.tableDays.dom);
     this.monthview = true;
-    this.table.setMonth(date ?? new Date());
+    this.table.setMonth(this.calendars, date ?? new Date());
   }
   /*
         Use this function to specify the name of the raido inputs, that will be used to set the range
@@ -583,35 +626,16 @@ class View {
     }
   }
 
-  addPage(j) {
-    //console.log("Adding " + j + " pages");
-    if (j < 0) {
-      let di = this.table.getDateInterval();
-      let diff = di[1].getTime() - di[0].getTime();
-      if (this.monthview) {
-        // Add days to be within the safe rage in month view
-        this.setDays(0, Common.addDays(di[0], -1));
-      } else {
-        let start = new Date(di[0].getTime() - diff);
-        this.setDays(0, start);
-      }
-    } else if (j > 0) {
-      let di = this.table.getDateInterval();
-      console.log(di);
-      this.setDays(0, di[1]);
-    }
-  }
-
   prev() {
-    this.addPage(-1);
+    this.table.addPage(this.calendars, -1);
   }
 
   next() {
-    this.addPage(1);
+    this.table.addPage(this.calendars, 1);
   }
 
   today() {
-    this.setDays(this.days, new Date());
+    this.table.addPage(this.calendars, 0);
   }
 
   static getTouches(evt) {

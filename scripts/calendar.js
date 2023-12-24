@@ -12,8 +12,6 @@ class Common{
     static FRIDAY = 5;
     static SATURDAY = 6;
 
-    static calendars = [];
-
     static hide(dom){
         dom.classList.add("hidden");
     }

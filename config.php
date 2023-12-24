@@ -37,9 +37,13 @@ define(
         +---------------------------------*/
         "color_default" => [
             "#D65076",
-            "#008080",
+            "#00758F",
             "#EFC050",
-            "#88B04B"
+            "#88B04B",
+            "#E15D44",
+            "#D2386C",
+            "#6C244C",
+            "#008080"
         ],
         "background" => "",                                     // Background image for login Form                                          
     )
