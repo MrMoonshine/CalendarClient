@@ -25,47 +25,6 @@ class CalendarTableCell {
   }
 }
 
-class CalendarTableEventPart {
-  constructor(dom, wholeDay, start, end, appointment) {
-    this.dom = dom;
-    this.start = start;
-    this.end = end;
-    this.wholeDay = wholeDay;
-    this.track = 0;
-    this.appointment = appointment;
-  }
-
-  setTrack(track) {
-    this.track = track;
-  }
-
-  static overlap(a, b, trackIgnore = false) {
-    if (a.appointment.hidden || a.appointment.hidden) {
-      return false;
-    }
-
-    if (!trackIgnore && a.track != b.track) {
-      return false;
-    }
-
-    if (a.wholeDay || b.wholeDay || b == a) {
-      return false;
-    }
-    return (
-      (b.start >= a.start && b.start <= a.end) ||
-      (b.end >= a.start && b.end <= a.end)
-    );
-  }
-
-  static overlapCount(m, list, trackIgnore = false) {
-    let counter = 0;
-    list.forEach((elem) => {
-      counter += CalendarTableEventPart.overlap(m, elem, trackIgnore) ? 1 : 0;
-    });
-    return counter;
-  }
-}
-
 class CalendarTable {
   table;
   static DAV_VIEW_MAX_TRACKS = 5;
@@ -126,177 +85,68 @@ class CalendarTable {
     return 7 * CalendarTable.WEEK_COUNT_MONTH_VIEW;
   }
 
-  static addEvent(parent, appointment){
-    //console.log(parent);
-    /*          +--------------------------------------+
-                    |                                      |
-                    |    Creating DIVs for Appointments    |
-                    |                                      |
-                    +--------------------------------------+    */
-    if (!appointment.valid) {
-      console.error(
-        "Invalid appointment " +
-          (appointment.summary ?? " ERROR ") +
-          appointment.error_message
-      );
-      return;
+  arrangingNecessary(element){
+    if(element.appointment.wholeDay()){
+      return false;
     }
-    // Exit if the calendar is hidden
-    if (appointment.calendar.hidden) {
-      return;
-    }
-
-    do {
-      if (!appointment.enable) {
-        continue;
-      }
-
-      let cell = parent.getCell(appointment.dtstart);
-      let current = structuredClone(appointment.dtstart);
-      current = Common.timeSet0(current);
-      let wholeDay = appointment.wholeDay();
-      //console.log("Adding " + appointment.summary + appointment.dtstart.toLocaleString("de"));
-
-      // Step forward a day each time, until the end day is reached.
-      while (Common.timeSet0(current) <= Common.timeSet0(appointment.dtend)) {
-        let firstDay = Common.sameDay(appointment.dtstart, current);
-        let start = firstDay ? appointment.dtstart : Common.timeSet0(current);
-        let end = appointment.dtend;
-        let lastDay = Common.sameDay(current, end);
-        if (!lastDay) {
-          end = structuredClone(current);
-          end.setHours(23, 59, 59);
-        }
-
-        let deltah = (end.getTime() - start.getTime()) / Common.MS_HOUR;
-        deltah = Common.round(deltah, 2);
-        //console.log(appointment.summary + " part has " + deltah + " hours");
-        if (
-          deltah <= 0 ||
-          current >= Common.addDays(parent.start, parent.dayCount)
-        ) {
-          // remove unnessesary stub
-          break;
-        }
-
-        let div = document.createElement("div");
-        div.classList.add("appointment");
-        div.classList.add("shine");
-        let eventPart = new CalendarTableEventPart(
-          div,
-          wholeDay,
-          start,
-          end,
-          appointment
-        );
-
-        // content
-        if (parent.dayCount < 30) {
-          let b = document.createElement("b");
-          div.appendChild(b);
-          b.innerHTML = appointment.summary;
-          let p = document.createElement("p");
-          p.innerHTML += "von: " + appointment.dtstart.toLocaleString("de");
-          p.innerHTML += "<br>bis: " + appointment.dtend.toLocaleString("de");
-          div.appendChild(p);
-          if (!wholeDay) {
-            // make appointment style open in case it goes over date line
-            if (!Common.sameDay(appointment.dtstart, current)) {
-              div.classList.add("opentop");
-            }
-            if (!Common.sameDay(appointment.dtend, current)) {
-              div.classList.add("openbottom");
-            }
-            div.style.height =
-              "calc(" + 100 * deltah + "% +  var(--appointment-radius))";
-
-            // Overlap handling
-            while (
-              CalendarTableEventPart.overlapCount(eventPart, parent.events) &&
-              eventPart.track < CalendarTable.DAV_VIEW_MAX_TRACKS
-            ) {
-              console.log(appointment.summary + " overlaps");
-              eventPart.setTrack(eventPart.track + 1);
-            }
-            parent.events.push(eventPart);
-          }
-
-          let startcell = parent.getCell(start, wholeDay);
-          if (!startcell) {
-            current = Common.addDays(current, 1);
-            continue;
-          }
-          // Get the diff of start and cell in hours
-          let deltastart =
-            (start.getTime() - startcell.start.getTime()) / Common.MS_HOUR;
-          div.style.top = Math.round(100 * deltastart) + "%";
-          startcell.dom.appendChild(div);
-        } else {
-          let cell = parent.getCell(start, wholeDay);
-          if (!cell) {
-            current = Common.addDays(current, 1);
-            continue;
-          }
-          // Month View
-          if (!wholeDay) {
-            let b = document.createElement("b");
-            // Arrows
-            if (firstDay && !lastDay) {
-              b.innerHTML += "&#x21A6;";
-            } else if (!firstDay && lastDay) {
-              b.innerHTML += "&#x21E5;";
-            } else if (!firstDay && !lastDay) {
-              b.innerHTML += "&#x27F7;";
-            }
-
-            if (firstDay) {
-              b.innerHTML += start.toLocaleString("default", {
-                hour: "numeric",
-                minute: "2-digit",
-              });
-            } else if (lastDay) {
-              b.innerHTML += appointment.dtend.toLocaleString("default", {
-                hour: "numeric",
-                minute: "2-digit",
-              });
-            }
-            div.appendChild(b);
-          }
-
-          div.innerHTML += " " + appointment.summary;
-          cell.dom.appendChild(div);
-        }
-
-        div.style.backgroundColor = appointment.calendar.color;
-        div.classList.add("calendar" + appointment.calendar.id);
-        appointment.dom.push(div);
-        current = Common.addDays(current, 1);
-      }
-    } while (
-      appointment.calculateNext() &&
-      appointment.dtstart <=
-        Common.addDays(parent.start, parent.getActualDayCount())
-    );
-    //console.log("Day count is " + parent.dayCount);
+    return true;
   }
 
-  static arrangeTracks(parent, ignoreCounter = false) {
+  arrangeTracks( ignoreCounter = false) {
     if (!ignoreCounter) {
       console.log("A Request has finished");
-      parent.counter++;
-      if (parent.calendarCount > parent.counter) {
+      this.counter++;
+      if (this.calendarCount > this.counter) {
         return;
       }
     }
+    // Reset tracks
+    for(let i = 0; i < this.events.length; i++){
+      this.events[i].setTrack(0);
+    }
 
     console.log("Arranging elements...");
-    parent.events.forEach((p) => {
-      let olc = CalendarTableEventPart.overlapCount(p, parent.events, true);
-      //console.log(p.dom.innerHTML + " has " + olc);
-      p.dom.style.width =
-        "calc((100% - var(--appointment-radius))/" + (olc + 1) + ")";
-      p.dom.style.left = "calc(100% * " + p.track / (olc + 1) + ")";
-    });
+    for(let i = 0; i < this.events.length; i++){
+      if(!this.arrangingNecessary(this.events[i])){
+        continue;
+      }
+      let olc = AppointmentPart.overlapCount(this.events[i], this.events, false);
+      let track = 0;
+      while(olc > 0 && track < 5){
+        this.events[i].setTrack(this.events[i].track + 1);
+        track++;
+        //console.log("Trying track " + this.events[i].track);
+        olc = AppointmentPart.overlapCount(this.events[i], this.events, false);
+      }
+    };
+
+    for(let i = 0; i < this.events.length; i++){
+      if(!this.arrangingNecessary(this.events[i])){
+        continue;
+      }
+      let neighbours = AppointmentPart.getOverlaps(this.events[i], this.events, true);
+      let maxtrack = 0;
+      //console.log(this.events[i].appointment.summary);
+      //console.log(neighbours);
+
+      neighbours.forEach((n) => {
+        //console.log("loop" + n.track);
+        if(n.track > maxtrack){
+          maxtrack = n.track;
+        }
+      });
+
+      if(this.events[i].track > maxtrack){
+        maxtrack = this.events[i].track;
+      }
+
+      //let infostr = "<br>track ("+ this.events[i].track +"|"+(maxtrack + 1)+")";
+      //this.events[i].dom.innerHTML += infostr;
+
+      neighbours.forEach((n) => {
+        n.setCSS(maxtrack);
+      });
+    }
   }
 
   get dom() {
@@ -326,15 +176,16 @@ class CalendarTable {
   }
 
   update(calendars){
-    let bounds = this.getDateInterval();
-    console.log(bounds);
+    /*let bounds = this.getDateInterval();
+    console.log(bounds);*/
     calendars.forEach((calendar) => {
-      calendar.update(
+      /*calendar.update(
         bounds,
         this,
         CalendarTable.addEvent,
         CalendarTable.arrangeTracks
-      );
+      );*/
+      calendar.update(this);
     });
   }
 
@@ -375,7 +226,11 @@ class CalendarTableDays extends CalendarTable {
     trh.appendChild(thcorner);
     for (let i = 0; i < this.dayCount; i++) {
       let th = document.createElement("th");
-      let date = new Date(this.start.getTime() + Common.MS_DAY * i);
+      let date = Common.addDays(this.start, i);
+      // mark today
+      if(Common.sameDay(date, new Date())){
+        th.classList.add("today");
+      }
       // format date
       th.innerHTML = date.toLocaleString("default", {
         weekday: "short",

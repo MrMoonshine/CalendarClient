@@ -68,15 +68,102 @@ class Common{
     }
 }
 
+class AppointmentPart {
+    element;
+    constructor(wholeDay, start, end, appointment) {
+      this.element = document.createElement("div");
+      this.element.classList.add("appointment");
+      this.element.classList.add("shine");
+      this.start = start;
+      this.end = end;
+      this.wholeDay = wholeDay;
+      this.track = 0;
+      this.appointment = appointment;
+    }
+
+    get dom(){
+        return this.element;
+    }
+     
+    get etag(){
+        return this.appointment.etag;
+    }
+
+    clear(){
+        this.dom.remove();
+    }
+
+    setTrack(track) {
+        this.track = track;
+    }
+
+    setCSS(trackcount){
+        this.dom.style.width = "calc((100% - var(--appointment-radius))/" + (trackcount + 1) + ")";
+        this.dom.style.left = "calc(100% * " + this.track / (trackcount + 1) + ")";
+    }
+
+    open(cssclass, enable){
+        if(enable){
+            this.dom.classList.add(cssclass);
+        }else{
+            this.dom.classList.remove(cssclass);
+        }
+    }
+
+    openBottom(enable = true){
+        this.open("openbottom", enable);
+    }
+
+    openTop(enable = true){
+        this.open("opentop", enable);
+    }
+  
+    static overlap(a, b, trackIgnore = false) {
+      if (a.appointment.hidden || a.appointment.hidden) {
+        return false;
+      }
+  
+      if (!trackIgnore && a.track != b.track) {
+        return false;
+      }
+  
+      if (a.wholeDay || b.wholeDay || b.etag == a.etag) {
+        return false;
+      }
+      return (
+        (b.start >= a.start && b.start <= a.end) ||
+        (b.end >= a.start && b.end <= a.end)
+      );
+    }
+  
+    static overlapCount(m, list, trackIgnore = false) {
+      let counter = 0;
+      list.forEach((elem) => {
+        counter += AppointmentPart.overlap(m, elem, trackIgnore) ? 1 : 0;
+      });
+      return counter;
+    }
+
+    static getOverlaps(m, list, trackIgnore = false){
+        let retval = [];
+        list.forEach((elem) => {
+            if(AppointmentPart.overlap(m, elem, trackIgnore)){
+                retval.push(elem);
+            }
+        });
+        return retval;
+    }
+  }
+
 class Appointment{
-    dom;
+    parts;
     constructor(parent, raw){
         this.calendar = parent;
         this.href = raw.href;
         this.etag = raw.etag;
         this.data = raw.data;
 
-        this.dom = [];
+        this.parts = [];
 
         // Parsing ICAL data
         //this.data = this.data.replace("Vienna", "Istanbul"); //Timezone lab
@@ -90,11 +177,6 @@ class Appointment{
         this.description = vevent.getFirstPropertyValue('description');
         this.rrule = vevent.getFirstPropertyValue('rrule');
     
-        /*if(this.rrule){
-            console.log(this.data);
-            console.log(vevent);
-            console.log(this.rrule);
-        }*/
         // Get Times
         this.dtstart = Appointment.getDateFromProperty(
             vevent.getFirstProperty('dtstart')
@@ -147,22 +229,161 @@ class Appointment{
         return this.dtstart.getHours() == 0 && this.dtstart.getMinutes() == 0;
     }
 
-    destroyDom(){
-        for(let i = 0; i < this.dom.length; i++){
-            this.dom[i].remove();
+    show(){
+        this.dom.forEach(Common.show);
+    }
+
+    hide(){
+        this.dom.forEach(Common.hide);
+    }
+
+    clear(){
+        this.parts.forEach((p) => p.clear())
+        this.parts = [];
+    }
+
+    addToTable(table){
+        if (!this.valid) {
+            console.error(
+              "Invalid appointment " +
+                (this.summary ?? " ERROR ") +
+                this.error_message
+            );
+            return;
         }
-        this.dom = [];
+        let interval = table.getDateInterval();
+        this.rewind();  // Reset in case of repeating event
+        do{
+            if (!this.enable) {
+                continue;
+              }
+        
+              let cell = table.getCell(this.dtstart);
+              let current = Common.timeSet0(this.dtstart);
+              let wholeDay = this.wholeDay();
+
+              while (Common.timeSet0(current) <= Common.timeSet0(this.dtend)) {
+                let firstDay = Common.sameDay(this.dtstart, current);
+                let start = firstDay ? this.dtstart : Common.timeSet0(current);
+                let end = this.dtend;
+                let lastDay = Common.sameDay(current, end);
+                if (!lastDay) {
+                  end = structuredClone(current);
+                  end.setHours(23, 59, 59);
+                }
+        
+                let deltah = (end.getTime() - start.getTime()) / Common.MS_HOUR;
+                deltah = Common.round(deltah, 2);
+                //console.log(this.summary + " part has " + deltah + " hours");
+                if (
+                  deltah <= 0 ||
+                  current >= Common.addDays(table.start, table.dayCount)
+                ) {
+                  // remove unnessesary stub
+                  break;
+                }
+        
+                let eventPart = new AppointmentPart(
+                  wholeDay,
+                  start,
+                  end,
+                  this
+                );
+                this.parts.push(eventPart);
+                table.events.push(eventPart);
+        
+                // content
+                if (table.dayCount < 30) {
+                  let b = document.createElement("b");
+                  eventPart.dom.appendChild(b);
+                  b.innerHTML = this.summary;
+                  // Add a repeating icon in case it is
+                  if(this.isRepeating()){
+                    b.innerHTML += " &#x21BB;";
+                  }
+                  /*let p = document.createElement("p");
+                  p.innerHTML += "von: " + this.dtstart.toLocaleString("de");
+                  p.innerHTML += "<br>bis: " + this.dtend.toLocaleString("de");
+                  eventPart.dom.appendChild(p);*/
+                  if (!wholeDay) {
+                    // make this style open in case it goes over date line
+                    eventPart.openTop(!Common.sameDay(this.dtstart, current));
+                    eventPart.openBottom(!Common.sameDay(this.dtend, current));
+                    // Calcuate height for entry
+                    eventPart.dom.style.height =
+                      "calc(" + 100 * deltah + "% +  var(--appointment-radius))";
+        
+                    // Overlap handling
+                    /*while (
+                        AppointmentPart.overlapCount(eventPart, table.events) &&
+                      eventPart.track < CalendarTable.DAV_VIEW_MAX_TRACKS
+                    ) {
+                      console.log(this.summary + " overlaps");
+                      eventPart.setTrack(eventPart.track + 1);
+                    }*/
+                    //table.events.push(eventPart);
+                  }
+        
+                  let startcell = table.getCell(start, wholeDay);
+                  if (!startcell) {
+                    current = Common.addDays(current, 1);
+                    continue;
+                  }
+
+                  // Get the diff of start and cell in hours
+                  let deltastart =
+                    (start.getTime() - startcell.start.getTime()) / Common.MS_HOUR;
+                    eventPart.dom.style.top = Math.round(100 * deltastart) + "%";
+                  startcell.dom.appendChild(eventPart.dom);
+                } else {
+                  let cell = table.getCell(start, wholeDay);
+                  if (!cell) {
+                    current = Common.addDays(current, 1);
+                    continue;
+                  }
+                  // Month View
+                  if (!wholeDay) {
+                    let b = document.createElement("b");
+                    // Arrows
+                    if (firstDay && !lastDay) {
+                      b.innerHTML += "&#x21A6;";
+                    } else if (!firstDay && lastDay) {
+                      b.innerHTML += "&#x21E5;";
+                    } else if (!firstDay && !lastDay) {
+                      b.innerHTML += "&#x27F7;";
+                    }
+        
+                    if (firstDay) {
+                      b.innerHTML += start.toLocaleString("default", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      });
+                    } else if (lastDay) {
+                      b.innerHTML += this.dtend.toLocaleString("default", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      });
+                    }
+                    eventPart.dom.appendChild(b);
+                  }
+        
+                  eventPart.dom.innerHTML += " " + this.summary;
+                  cell.dom.appendChild(eventPart.dom);
+                }
+        
+                eventPart.dom.style.backgroundColor = this.calendar.color;
+                eventPart.dom.classList.add("calendar" + this.calendar.id);
+                current = Common.addDays(current, 1);
+              }
+        }while(
+            this.calculateNext() &&
+            this.dtstart <=
+            Common.addDays(table.start, table.getActualDayCount())
+        );  // handle recurring
+
     }
 
-    get dom(){
-        return this.dom;
-    }
-
-    /*
-        @brief calculates dtstart and dtend for the next occurance if it is a repeating event.
-        @returns true if there is a next one, false if there is not
-    */
-    calculateNext(){
+    isRepeating(){
         if(!this.rrule){
             return false;
         }
@@ -175,6 +396,17 @@ class Appointment{
             if(this.rrule.counter <= this.counter){
                 return false;
             }
+        }
+        return true;
+    }
+
+    /*
+        @brief calculates dtstart and dtend for the next occurance if it is a repeating event.
+        @returns true if there is a next one, false if there is not
+    */
+    calculateNext(){
+        if(!this.isRepeating()){
+            return false;
         }
 
         let interval = this.rrule.interval ?? 1;
@@ -228,6 +460,13 @@ class Appointment{
         }
         this.counter++;
         return true;
+    }
+
+    rewind(){
+        this.dtstart = structuredClone(this.dtstartOriginal);
+        this.dtend = structuredClone(this.dtendOriginal);
+        this.counter = 0;       // Count of drawn iterations
+        this.enable = true;     // Should this iteration be drawn?
     }
 
     // Returns UTC offset in milliseconds
@@ -294,6 +533,8 @@ class Calendar{
         this.passwd = passwd;
         this.hidden = hidden;
         this.color = color;
+
+        this.appointments = [];
         
         this.id = Calendar.COUNTER++;
         this.buildDialog();
@@ -311,19 +552,17 @@ class Calendar{
         this.api.pathname += "calendar.php";
     }
 
-    setColor(color){
-        this.color = color;
-        this.colordisplay.style.backgroundColor = this.color;
+    clearAppointments(){
+        this.appointments.forEach((a) => a.clear());
+        this.appointments = [];
     }
-
     /*
         @brief Fetch data from DAViCal server via the php backend
-        @param bounds [Date, Date] interval for calendar search
-        @param callback(Appointment appointment) function used to populate a calendar table by providing raw data of an appointment
+        @param table table object
     */
-    update(bounds, parent, callback, onfinish){
-        //console.log(Calendar.date2iCal(bounds[0]));
-        //console.log(Calendar.date2iCal(bounds[1]));
+    update(table){
+        table.events = [];
+        let bounds = table.getDateInterval();
         this.spinner.style.display = "unset";
         this.api.searchParams.append("calendar", this.url);
         this.api.searchParams.append("start", Calendar.date2iCal(bounds[0]));
@@ -347,19 +586,31 @@ class Calendar{
                 this.setError(msg);
                 return;
             }
+            this.clearAppointments();
             // add appointments
             data.events.forEach(elem => {
-                callback(parent, new Appointment(this, elem));
+                //callback(parent, new Appointment(this, elem));
+                this.appointments.push(new Appointment(this, elem));
             });
             this.spinner.style.display = "none";
         });
 
         req.addEventListener("loadend", () => {
-            onfinish(parent);
+            this.addToTable(table);
+            table.arrangeTracks();
         });
 
         req.open("GET", this.api);
         req.send();
+    }
+
+    addToTable(table){
+        this.appointments.forEach((a) => a.addToTable(table));
+    }
+
+    setColor(color){
+        this.color = color;
+        this.colordisplay.style.backgroundColor = this.color;
     }
     /*
         Building DOM for the calendar to select, hide & edit it
